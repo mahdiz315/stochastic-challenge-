@@ -1,0 +1,67 @@
+
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stochastic Challenge</title>
+<style>
+:root{--text:#0f172a;--muted:#64748b;--accent:#2563eb}
+*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(160deg,#dbeafe,#f8fafc);color:var(--text);min-height:100vh}
+.wrap{max-width:620px;margin:auto;padding:20px}.card{background:white;border-radius:22px;padding:24px;box-shadow:0 14px 35px rgba(15,23,42,.12);margin-top:20px}
+h1{text-align:center;font-size:34px;margin:8px 0}.sub{text-align:center;color:var(--muted);margin-bottom:18px}
+input{width:100%;font-size:20px;padding:15px;border:1px solid #cbd5e1;border-radius:12px;margin:7px 0}
+button{border:0;border-radius:14px;font-weight:800;cursor:pointer}.join{width:100%;background:var(--accent);color:white;font-size:20px;padding:15px;margin-top:10px}
+.numbers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}.num{height:90px;font-size:36px;background:#e2e8f0;color:#0f172a}.num.selected{background:#2563eb;color:white;outline:5px solid #93c5fd}
+.round{text-align:center;font-size:24px;font-weight:800}.status{text-align:center;background:#eff6ff;border-radius:14px;padding:18px;margin:15px 0;font-size:20px}.score{text-align:center;font-size:22px}.score b{font-size:34px}
+.hidden{display:none}.error{color:#b91c1c;text-align:center;margin-top:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>🎲 STOCHASTIC CHALLENGE</h1><div class="sub">Pick a number. Can you beat randomness?</div>
+<div id="joinCard" class="card">
+<h2>Join the game</h2><input id="room" inputmode="numeric" maxlength="4" placeholder="Room code"><input id="name" maxlength="40" placeholder="Your name">
+<button class="join" onclick="joinGame()">JOIN</button><div id="joinError" class="error"></div>
+</div>
+<div id="playCard" class="card hidden">
+<div id="round" class="round">Round 1 / 20</div><div id="status" class="status">Choose your number</div>
+<div id="numbers" class="numbers">
+<button class="num" data-n="1" onclick="choose(1)">1</button><button class="num" data-n="2" onclick="choose(2)">2</button><button class="num" data-n="3" onclick="choose(3)">3</button>
+<button class="num" data-n="4" onclick="choose(4)">4</button><button class="num" data-n="5" onclick="choose(5)">5</button><button class="num" data-n="6" onclick="choose(6)">6</button>
+</div>
+<div class="score">Your score: <b id="score">0</b></div>
+</div>
+</div>
+<script>
+let room="";let playerId=localStorage.getItem("sc_player_id");
+if(!playerId){playerId=(crypto.randomUUID?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now());localStorage.setItem("sc_player_id",playerId)}
+let pollTimer=null;const params=new URLSearchParams(location.search);
+if(params.get("room"))document.getElementById("room").value=params.get("room");
+if(localStorage.getItem("sc_player_name"))document.getElementById("name").value=localStorage.getItem("sc_player_name");
+
+async function api(path,body){
+ const r=await fetch(path,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});
+ const d=await r.json().catch(()=>({ok:false,error:"Server error"}));if(!r.ok||d.ok===false)throw new Error(d.error||"Request failed");return d;
+}
+async function joinGame(){
+ room=document.getElementById("room").value.trim();const name=document.getElementById("name").value.trim();document.getElementById("joinError").textContent="";
+ if(!room||!name){document.getElementById("joinError").textContent="Please enter the room code and your name.";return}
+ try{const d=await api("/api/join",{room,name,player_id:playerId});localStorage.setItem("sc_player_name",name);localStorage.setItem("sc_room",room);
+ document.getElementById("joinCard").classList.add("hidden");document.getElementById("playCard").classList.remove("hidden");render(d.state);startPolling()}
+ catch(e){document.getElementById("joinError").textContent=e.message}
+}
+async function choose(n){try{render((await api("/api/predict",{room,player_id:playerId,choice:n})).state)}catch(e){alert(e.message)}}
+function render(s){
+ document.getElementById("round").textContent=`Round ${s.round} / ${s.total_rounds}`;document.getElementById("score").textContent=s.own?s.own.score:0;
+ document.querySelectorAll(".num").forEach(btn=>{const n=Number(btn.dataset.n);btn.disabled=s.status!=="accepting";btn.classList.toggle("selected",s.own&&s.own.prediction===n)});
+ const st=document.getElementById("status"),nums=document.getElementById("numbers");
+ if(s.status==="accepting"){nums.classList.remove("hidden");st.innerHTML=s.own&&s.own.prediction?`✓ Your choice: <b>${s.own.prediction}</b><br>Waiting for the teacher to lock predictions...`:"Choose one number"}
+ else if(s.status==="locked"){st.textContent="🔒 Predictions locked. Waiting for the die roll..."}
+ else if(s.status==="result"){const picked=s.own?s.own.prediction:null;st.innerHTML=`🎲 Result = <b>${s.result}</b><br>${picked===s.result?"🎉 Correct! +1 point":"Not this time — next round!"}`}
+ else if(s.status==="finished"){nums.classList.add("hidden");st.innerHTML=`🏁 Game finished!<br>Your final score: <b>${s.own?s.own.score:0}</b>`}
+}
+function startPolling(){if(pollTimer)clearInterval(pollTimer);pollTimer=setInterval(async()=>{try{render((await api(`/api/state?room=${encodeURIComponent(room)}&player_id=${encodeURIComponent(playerId)}`)).state)}catch(e){}},1000)}
+})();
+</script>
+</body>
+</html>
