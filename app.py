@@ -56,6 +56,20 @@ def init_db():
             die_result INTEGER NOT NULL,
             PRIMARY KEY (room, round_no)
         );
+
+        CREATE TABLE IF NOT EXISTS bonus_choices (
+            room TEXT NOT NULL,
+            player_id TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            target INTEGER NOT NULL,
+            PRIMARY KEY (room, player_id)
+        );
+
+        CREATE TABLE IF NOT EXISTS bonus_results (
+            room TEXT PRIMARY KEY,
+            die1 INTEGER NOT NULL,
+            die2 INTEGER NOT NULL
+        );
         """)
         conn.commit()
         conn.close()
@@ -133,7 +147,6 @@ def public_state(room, player_id=None):
         return None
 
     round_no = game["round_no"]
-
     students = conn.execute(
         "SELECT player_id, name, score FROM students WHERE room=?",
         (room,)
@@ -153,7 +166,6 @@ def public_state(room, player_id=None):
         "SELECT die_result FROM results WHERE room=? AND round_no=?",
         (room, round_no)
     ).fetchone()
-
     result = result_row["die_result"] if result_row else None
 
     winners_this_round = 0
@@ -164,7 +176,23 @@ def public_state(room, player_id=None):
             (room, round_no, result)
         ).fetchone()["c"]
 
+    bonus_choice_count = conn.execute(
+        "SELECT COUNT(*) AS c FROM bonus_choices WHERE room=?",
+        (room,)
+    ).fetchone()["c"]
+
+    bonus_result_row = conn.execute(
+        "SELECT die1, die2 FROM bonus_results WHERE room=?",
+        (room,)
+    ).fetchone()
+    bonus_result = (
+        {"die1": bonus_result_row["die1"], "die2": bonus_result_row["die2"]}
+        if bonus_result_row else None
+    )
+
     own = None
+    own_bonus = None
+
     if player_id:
         student = conn.execute(
             "SELECT name, score FROM students WHERE room=? AND player_id=?",
@@ -184,6 +212,35 @@ def public_state(room, player_id=None):
                 "prediction": pred["choice"] if pred else None,
             }
 
+            bc = conn.execute(
+                "SELECT mode, target FROM bonus_choices "
+                "WHERE room=? AND player_id=?",
+                (room, player_id)
+            ).fetchone()
+
+            if bc:
+                earned = None
+                won = None
+
+                if bonus_result_row:
+                    target = bc["target"]
+                    if bc["mode"] == "one":
+                        won = target == bonus_result_row["die1"]
+                        earned = 20 if won else 0
+                    else:
+                        won = (
+                            target == bonus_result_row["die1"]
+                            or target == bonus_result_row["die2"]
+                        )
+                        earned = 10 if won else 0
+
+                own_bonus = {
+                    "mode": bc["mode"],
+                    "target": bc["target"],
+                    "won": won,
+                    "earned": earned,
+                }
+
     state = {
         "room": room,
         "round": round_no,
@@ -195,6 +252,9 @@ def public_state(room, player_id=None):
         "result": result,
         "winners_this_round": winners_this_round,
         "own": own,
+        "bonus_choice_count": bonus_choice_count,
+        "bonus_result": bonus_result,
+        "own_bonus": own_bonus,
         "finished_stats": finished_stats_conn(conn, room, game["total_rounds"])
             if game["status"] == "finished" else None,
     }
@@ -287,17 +347,11 @@ def join_game():
 
         if not game:
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "Game room not found."
-            }), 404
+            return jsonify({"ok": False, "error": "Game room not found."}), 404
 
         if game["status"] == "finished":
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "This game has already finished."
-            }), 400
+            return jsonify({"ok": False, "error": "This game has already finished."}), 400
 
         conn.execute(
             "INSERT INTO students(room, player_id, name, score) "
@@ -309,10 +363,7 @@ def join_game():
         conn.commit()
         conn.close()
 
-    return jsonify({
-        "ok": True,
-        "state": public_state(room, player_id)
-    })
+    return jsonify({"ok": True, "state": public_state(room, player_id)})
 
 
 @app.route("/api/state")
@@ -323,10 +374,7 @@ def state():
     state_data = public_state(room, player_id)
 
     if not state_data:
-        return jsonify({
-            "ok": False,
-            "error": "Game room not found."
-        }), 404
+        return jsonify({"ok": False, "error": "Game room not found."}), 404
 
     return jsonify({"ok": True, "state": state_data})
 
@@ -344,10 +392,7 @@ def predict():
         choice = 0
 
     if choice not in range(1, 7):
-        return jsonify({
-            "ok": False,
-            "error": "Choice must be 1 through 6."
-        }), 400
+        return jsonify({"ok": False, "error": "Choice must be 1 through 6."}), 400
 
     with db_lock:
         conn = db()
@@ -358,17 +403,11 @@ def predict():
 
         if not game:
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "Game room not found."
-            }), 404
+            return jsonify({"ok": False, "error": "Game room not found."}), 404
 
         if game["status"] != "accepting":
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "Predictions are already locked."
-            }), 400
+            return jsonify({"ok": False, "error": "Predictions are already locked."}), 400
 
         student = conn.execute(
             "SELECT 1 FROM students WHERE room=? AND player_id=?",
@@ -377,37 +416,23 @@ def predict():
 
         if not student:
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "Please join the game first."
-            }), 403
+            return jsonify({"ok": False, "error": "Please join the game first."}), 403
 
         conn.execute(
             "INSERT INTO predictions(room, round_no, player_id, choice) "
             "VALUES(?,?,?,?) "
-            "ON CONFLICT(room, round_no, player_id) "
-            "DO UPDATE SET choice=excluded.choice",
+            "ON CONFLICT(room, round_no, player_id) DO UPDATE SET choice=excluded.choice",
             (room, game["round_no"], player_id, choice)
         )
 
         conn.commit()
         conn.close()
 
-    return jsonify({
-        "ok": True,
-        "state": public_state(room, player_id)
-    })
+    return jsonify({"ok": True, "state": public_state(room, player_id)})
 
 
 @app.route("/api/lock-roll", methods=["POST"])
 def lock_and_roll():
-    """
-    Teacher presses one button:
-    1) lock predictions
-    2) generate a fair virtual die result
-    3) score correct students
-    4) publish the result to everyone
-    """
     data = request.get_json(silent=True) or {}
 
     room = str(data.get("room", "")).strip()
@@ -424,10 +449,7 @@ def lock_and_roll():
 
         if not require_teacher(game_dict, token):
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "Teacher authorization failed."
-            }), 403
+            return jsonify({"ok": False, "error": "Teacher authorization failed."}), 403
 
         if game["status"] != "accepting":
             conn.close()
@@ -437,8 +459,6 @@ def lock_and_roll():
             }), 400
 
         round_no = game["round_no"]
-
-        # Secure random integer 1..6 for classroom fairness.
         result = secrets.randbelow(6) + 1
 
         conn.execute(
@@ -492,21 +512,18 @@ def next_round():
 
         if not require_teacher(game_dict, token):
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "Teacher authorization failed."
-            }), 403
+            return jsonify({"ok": False, "error": "Teacher authorization failed."}), 403
 
         if game["status"] != "result":
             conn.close()
             return jsonify({
                 "ok": False,
-                "error": "Roll the die before moving to the next round."
+                "error": "Roll the die before moving on."
             }), 400
 
         if game["round_no"] >= game["total_rounds"]:
             conn.execute(
-                "UPDATE games SET status='finished' WHERE room=?",
+                "UPDATE games SET status='bonus_choice' WHERE room=?",
                 (room,)
             )
         else:
@@ -519,8 +536,136 @@ def next_round():
         conn.commit()
         conn.close()
 
+    return jsonify({"ok": True, "state": public_state(room)})
+
+
+@app.route("/api/bonus-choice", methods=["POST"])
+def bonus_choice():
+    data = request.get_json(silent=True) or {}
+
+    room = str(data.get("room", "")).strip()
+    player_id = str(data.get("player_id", "")).strip()
+    mode = str(data.get("mode", "")).strip()
+
+    try:
+        target = int(data.get("target"))
+    except Exception:
+        target = 0
+
+    if mode not in ("one", "two"):
+        return jsonify({"ok": False, "error": "Choose one-die or two-dice challenge."}), 400
+
+    if target not in range(1, 7):
+        return jsonify({"ok": False, "error": "Choose a target number from 1 to 6."}), 400
+
+    with db_lock:
+        conn = db()
+
+        game = conn.execute(
+            "SELECT * FROM games WHERE room=?", (room,)
+        ).fetchone()
+
+        if not game:
+            conn.close()
+            return jsonify({"ok": False, "error": "Game room not found."}), 404
+
+        if game["status"] != "bonus_choice":
+            conn.close()
+            return jsonify({"ok": False, "error": "Bonus choices are not open."}), 400
+
+        student = conn.execute(
+            "SELECT 1 FROM students WHERE room=? AND player_id=?",
+            (room, player_id)
+        ).fetchone()
+
+        if not student:
+            conn.close()
+            return jsonify({"ok": False, "error": "Student not found."}), 403
+
+        conn.execute(
+            "INSERT INTO bonus_choices(room, player_id, mode, target) "
+            "VALUES(?,?,?,?) "
+            "ON CONFLICT(room, player_id) DO UPDATE SET "
+            "mode=excluded.mode, target=excluded.target",
+            (room, player_id, mode, target)
+        )
+
+        conn.commit()
+        conn.close()
+
+    return jsonify({"ok": True, "state": public_state(room, player_id)})
+
+
+@app.route("/api/bonus-roll", methods=["POST"])
+def bonus_roll():
+    data = request.get_json(silent=True) or {}
+
+    room = str(data.get("room", "")).strip()
+    token = str(data.get("teacher_token", "")).strip()
+
+    with db_lock:
+        conn = db()
+
+        game = conn.execute(
+            "SELECT * FROM games WHERE room=?", (room,)
+        ).fetchone()
+
+        game_dict = dict(game) if game else None
+
+        if not require_teacher(game_dict, token):
+            conn.close()
+            return jsonify({"ok": False, "error": "Teacher authorization failed."}), 403
+
+        if game["status"] != "bonus_choice":
+            conn.close()
+            return jsonify({"ok": False, "error": "Bonus challenge is not ready."}), 400
+
+        die1 = secrets.randbelow(6) + 1
+        die2 = secrets.randbelow(6) + 1
+
+        conn.execute(
+            "INSERT OR REPLACE INTO bonus_results(room, die1, die2) VALUES(?,?,?)",
+            (room, die1, die2)
+        )
+
+        choices = conn.execute(
+            "SELECT player_id, mode, target FROM bonus_choices WHERE room=?",
+            (room,)
+        ).fetchall()
+
+        for ch in choices:
+            won = False
+            points = 0
+
+            if ch["mode"] == "one":
+                won = ch["target"] == die1
+                points = 20 if won else 0
+            else:
+                won = (
+                    ch["target"] == die1
+                    or ch["target"] == die2
+                )
+                points = 10 if won else 0
+
+            if points:
+                conn.execute(
+                    "UPDATE students SET score=score+? "
+                    "WHERE room=? AND player_id=?",
+                    (points, room, ch["player_id"])
+                )
+
+        conn.execute(
+            "UPDATE games SET status='finished' WHERE room=?",
+            (room,)
+        )
+
+        conn.commit()
+        conn.close()
+
     return jsonify({
         "ok": True,
+        "die1": die1,
+        "die2": die2,
         "state": public_state(room)
     })
 
@@ -543,10 +688,7 @@ def finish_game():
 
         if not require_teacher(game_dict, token):
             conn.close()
-            return jsonify({
-                "ok": False,
-                "error": "Teacher authorization failed."
-            }), 403
+            return jsonify({"ok": False, "error": "Teacher authorization failed."}), 403
 
         conn.execute(
             "UPDATE games SET status='finished' WHERE room=?",
@@ -556,10 +698,7 @@ def finish_game():
         conn.commit()
         conn.close()
 
-    return jsonify({
-        "ok": True,
-        "state": public_state(room)
-    })
+    return jsonify({"ok": True, "state": public_state(room)})
 
 
 @app.route("/qr")
@@ -637,14 +776,38 @@ def export_csv():
         ])
 
     writer.writerow([])
-    writer.writerow(["Student", "Final Score"])
+    writer.writerow(["FINAL BONUS CHALLENGE"])
+    writer.writerow([
+        "Student", "Bonus Mode", "Target Number",
+        "Bonus Die 1", "Bonus Die 2", "Final Score"
+    ])
 
-    for p in conn.execute(
-        "SELECT name, score FROM students WHERE room=? "
+    bonus_result = conn.execute(
+        "SELECT die1, die2 FROM bonus_results WHERE room=?",
+        (room,)
+    ).fetchone()
+
+    students = conn.execute(
+        "SELECT player_id, name, score FROM students WHERE room=? "
         "ORDER BY score DESC, name COLLATE NOCASE ASC",
         (room,)
-    ).fetchall():
-        writer.writerow([p["name"], p["score"]])
+    ).fetchall()
+
+    for student in students:
+        bc = conn.execute(
+            "SELECT mode, target FROM bonus_choices "
+            "WHERE room=? AND player_id=?",
+            (room, student["player_id"])
+        ).fetchone()
+
+        writer.writerow([
+            student["name"],
+            bc["mode"] if bc else "",
+            bc["target"] if bc else "",
+            bonus_result["die1"] if bonus_result else "",
+            bonus_result["die2"] if bonus_result else "",
+            student["score"],
+        ])
 
     conn.close()
 
