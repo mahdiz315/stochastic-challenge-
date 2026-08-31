@@ -1,3 +1,4 @@
+
 <!doctype html>
 <html>
 <head>
@@ -5,27 +6,31 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stochastic Challenge - Teacher</title>
 <style>
-:root{--bg:#0f172a;--card:#111827;--soft:#1f2937;--text:#f8fafc;--muted:#cbd5e1;--accent:#38bdf8;--good:#22c55e;--warn:#f59e0b;--danger:#ef4444}
+:root{--card:#111827;--soft:#1f2937;--text:#f8fafc;--muted:#cbd5e1;--accent:#38bdf8;--good:#22c55e;--warn:#f59e0b;--danger:#ef4444}
 *{box-sizing:border-box}
 body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(135deg,#0f172a,#1e293b);color:var(--text);min-height:100vh}
 .wrap{max-width:1200px;margin:auto;padding:28px}
 h1{font-size:44px;margin:0 0 8px}.subtitle{color:var(--muted);margin-bottom:22px}
-.grid{display:grid;grid-template-columns:1.1fr .9fr;gap:20px}
-.card{background:rgba(17,24,39,.95);border:1px solid #334155;border-radius:20px;padding:22px;box-shadow:0 12px 35px rgba(0,0,0,.25)}
+.grid{display:grid;grid-template-columns:1.05fr .95fr;gap:20px}
+.card{background:rgba(17,24,39,.96);border:1px solid #334155;border-radius:20px;padding:22px}
 .statrow{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0}
 .stat{background:var(--soft);padding:16px;border-radius:14px;text-align:center}.stat b{display:block;font-size:30px;margin-top:4px}
-button{border:0;border-radius:12px;padding:14px 18px;font-size:18px;font-weight:700;cursor:pointer;margin:5px}
+button{border:0;border-radius:12px;padding:14px 18px;font-size:18px;font-weight:800;cursor:pointer;margin:5px}
 .primary{background:var(--accent);color:#082f49}.good{background:var(--good);color:#052e16}.warn{background:var(--warn);color:#451a03}.danger{background:var(--danger);color:white}
-.newgame{background:#22c55e;color:#052e16;font-size:24px;padding:18px 30px;min-width:280px}
-.die button{width:70px;height:70px;font-size:30px;background:#e2e8f0;color:#0f172a}
-.qr{width:230px;height:230px;background:white;padding:8px;border-radius:14px}
+.bigRoll{width:100%;font-size:24px;padding:18px;background:var(--warn);color:#451a03}
+.newgame{background:var(--good);color:#052e16;font-size:22px;padding:17px 28px}
+.qr{width:220px;height:220px;background:white;padding:8px;border-radius:14px}
 .room{font-size:54px;letter-spacing:8px;font-weight:900;color:#facc15}
 .top5{list-style:none;padding:0;margin:0}.top5 li{display:flex;justify-content:space-between;padding:12px 14px;background:var(--soft);margin:8px 0;border-radius:10px;font-size:20px}
-.resultBox{font-size:34px;text-align:center;padding:18px;border-radius:16px;background:#172554;margin-top:12px}
-input{padding:12px;border-radius:10px;border:1px solid #475569;background:#0b1220;color:white;font-size:18px;width:110px}
+.resultBox{font-size:30px;text-align:center;padding:18px;border-radius:16px;background:#172554;margin-top:12px}
+.dieStage{text-align:center;padding:18px;margin-top:14px;background:#0b1220;border-radius:18px;border:1px solid #334155}
+.dieFace{font-size:110px;line-height:1.05;min-height:120px}
+.dieLabel{font-size:26px;font-weight:800;margin-top:8px}
+input{padding:12px;border-radius:10px;border:1px solid #475569;background:#0b1220;color:white;font-size:18px;width:120px}
 a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 .finalRank{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:20px}
-@media(max-width:800px){.grid{grid-template-columns:1fr}h1{font-size:34px}.statrow{grid-template-columns:1fr}}
+.note{background:#172554;padding:14px;border-radius:12px;margin:14px 0;color:#dbeafe}
+@media(max-width:800px){.grid{grid-template-columns:1fr}h1{font-size:34px}.statrow{grid-template-columns:1fr}.qr{width:180px;height:180px}}
 </style>
 </head>
 <body>
@@ -35,7 +40,14 @@ a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 
 <div id="setup" class="card">
 <h2>Create a classroom game</h2>
-<label>Total rounds: <input id="roundCount" type="number" min="1" max="100" value="20"></label>
+<div class="note">
+<b>Number of rounds</b> means how many times the class will play.
+The number of students is counted automatically when they join.
+</div>
+<label>
+Number of rounds:
+<input id="roundCount" type="number" min="2" max="100" value="20">
+</label>
 <button class="primary" onclick="createGame()">CREATE GAME</button>
 <div id="setupError"></div>
 </div>
@@ -44,7 +56,11 @@ a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 <div class="grid">
 <div class="card">
 <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap">
-<div><div>ROOM CODE</div><div id="room" class="room">----</div><div><a id="studentLink" target="_blank"></a></div></div>
+<div>
+<div>ROOM CODE</div>
+<div id="room" class="room">----</div>
+<div><a id="studentLink" target="_blank"></a></div>
+</div>
 <img id="qr" class="qr" alt="Student QR code">
 </div>
 
@@ -56,22 +72,16 @@ a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 
 <div id="statusText" class="resultBox">Predictions are OPEN</div>
 
+<div id="dieStage" class="dieStage">
+<div id="dieFace" class="dieFace">🎲</div>
+<div id="dieLabel" class="dieLabel">Waiting to roll</div>
+</div>
+
 <div style="margin-top:16px">
-<button id="lockBtn" class="warn" onclick="lockPredictions()">🔒 LOCK PREDICTIONS</button>
+<button id="rollBtn" class="bigRoll" onclick="lockAndRoll()">🔒 LOCK PREDICTIONS & ROLL DIE</button>
+<button id="nextBtn" class="good hidden" onclick="nextRound()">NEXT ROUND ➜</button>
 <button id="finishBtn" class="danger" onclick="finishGame()">FINISH GAME</button>
-<button id="restartTopBtn" class="good hidden" onclick="startNewGame()">🔄 START NEW GAME</button>
-</div>
-
-<div id="resultControls" class="hidden">
-<h2>Enter the physical die result</h2>
-<div class="die">
-<button onclick="setResult(1)">1</button><button onclick="setResult(2)">2</button><button onclick="setResult(3)">3</button>
-<button onclick="setResult(4)">4</button><button onclick="setResult(5)">5</button><button onclick="setResult(6)">6</button>
-</div>
-</div>
-
-<div id="nextControls" class="hidden">
-<button class="good" onclick="nextRound()">NEXT ROUND ➜</button>
+<button id="restartTopBtn" class="newgame hidden" onclick="startNewGame()">🔄 START NEW GAME</button>
 </div>
 </div>
 
@@ -99,7 +109,9 @@ a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 <h2>Final Ranking</h2>
 <div id="finalRanking" class="finalRank"></div>
 
-<h2 style="text-align:center;margin-top:28px">Did the winners have a better strategy, or were they lucky?</h2>
+<h2 style="text-align:center;margin-top:28px">
+Did the winners have a better strategy, or were they lucky?
+</h2>
 
 <div style="text-align:center;margin-top:22px">
 <button class="primary" onclick="downloadCSV()">⬇ EXPORT CLASS DATA (CSV)</button>
@@ -113,17 +125,27 @@ a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 let room=sessionStorage.getItem("sc_teacher_room")||"";
 let teacherToken=sessionStorage.getItem("sc_teacher_token")||"";
 let pollTimer=null;
+let rolling=false;
+
+const dieFaces={1:"⚀",2:"⚁",3:"⚂",4:"⚃",5:"⚄",6:"⚅"};
 
 async function api(path,body){
- const r=await fetch(path,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});
+ const r=await fetch(path,{
+   method:body?"POST":"GET",
+   headers:body?{"Content-Type":"application/json"}:{},
+   body:body?JSON.stringify(body):undefined
+ });
  const d=await r.json().catch(()=>({ok:false,error:"Server error"}));
  if(!r.ok||d.ok===false)throw new Error(d.error||"Request failed");
  return d;
 }
 
+function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
+
 async function createGame(){
  try{
-  const d=await api("/api/create",{total_rounds:Number(document.getElementById("roundCount").value||20)});
+  const rounds=Number(document.getElementById("roundCount").value||20);
+  const d=await api("/api/create",{total_rounds:rounds});
   room=d.room;teacherToken=d.teacher_token;
   sessionStorage.setItem("sc_teacher_room",room);
   sessionStorage.setItem("sc_teacher_token",teacherToken);
@@ -144,33 +166,68 @@ function showGame(studentUrl){
 function medals(i){return["🥇","🥈","🥉","4.","5."][i]||(i+1)+"."}
 function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 
+async function animateDie(finalResult){
+ rolling=true;
+ const face=document.getElementById("dieFace");
+ const label=document.getElementById("dieLabel");
+ const rollBtn=document.getElementById("rollBtn");
+ rollBtn.disabled=true;
+ label.textContent="Rolling...";
+ for(let i=0;i<10;i++){
+   face.textContent=dieFaces[1+Math.floor(Math.random()*6)];
+   await sleep(90);
+ }
+ face.textContent=dieFaces[finalResult];
+ label.textContent=`RESULT = ${finalResult}`;
+ rolling=false;
+}
+
 function render(s){
  document.getElementById("round").textContent=`${s.round} / ${s.total_rounds}`;
  document.getElementById("players").textContent=s.student_count;
  document.getElementById("predictions").textContent=s.prediction_count;
 
- const top=document.getElementById("top5");top.innerHTML="";
- s.top5.forEach((p,i)=>{const li=document.createElement("li");li.innerHTML=`<span>${medals(i)} ${escapeHtml(p.name)}</span><b>${p.score}</b>`;top.appendChild(li)});
+ const top=document.getElementById("top5");
+ top.innerHTML="";
+ s.top5.forEach((p,i)=>{
+   const li=document.createElement("li");
+   li.innerHTML=`<span>${medals(i)} ${escapeHtml(p.name)}</span><b>${p.score}</b>`;
+   top.appendChild(li);
+ });
  if(!s.top5.length)top.innerHTML="<li><span>Waiting for students...</span><b>—</b></li>";
 
  const st=document.getElementById("statusText");
- const lockBtn=document.getElementById("lockBtn");
+ const rollBtn=document.getElementById("rollBtn");
+ const nextBtn=document.getElementById("nextBtn");
  const finishBtn=document.getElementById("finishBtn");
  const restartTopBtn=document.getElementById("restartTopBtn");
- const rc=document.getElementById("resultControls");
- const nc=document.getElementById("nextControls");
 
- lockBtn.classList.add("hidden");rc.classList.add("hidden");nc.classList.add("hidden");restartTopBtn.classList.add("hidden");
+ rollBtn.classList.add("hidden");
+ nextBtn.classList.add("hidden");
+ restartTopBtn.classList.add("hidden");
 
  if(s.status==="accepting"){
-  st.innerHTML="🟢 Predictions are OPEN";lockBtn.classList.remove("hidden");finishBtn.classList.remove("hidden");
- }else if(s.status==="locked"){
-  st.innerHTML="🔒 Predictions locked — roll your real die";rc.classList.remove("hidden");finishBtn.classList.remove("hidden");
+   st.innerHTML="🟢 Predictions are OPEN";
+   rollBtn.classList.remove("hidden");
+   rollBtn.disabled=false;
+   finishBtn.classList.remove("hidden");
+   if(!rolling){
+     document.getElementById("dieFace").textContent="🎲";
+     document.getElementById("dieLabel").textContent="Waiting to roll";
+   }
  }else if(s.status==="result"){
-  st.innerHTML=`🎲 RESULT = <b>${s.result}</b><br><span style="font-size:22px">${s.winners_this_round} student(s) predicted correctly!</span>`;
-  nc.classList.remove("hidden");finishBtn.classList.remove("hidden");
+   st.innerHTML=`🎲 RESULT = <b>${s.result}</b><br><span style="font-size:20px">${s.winners_this_round} student(s) predicted correctly!</span>`;
+   nextBtn.classList.remove("hidden");
+   finishBtn.classList.remove("hidden");
+   if(!rolling){
+     document.getElementById("dieFace").textContent=dieFaces[s.result]||"🎲";
+     document.getElementById("dieLabel").textContent=`RESULT = ${s.result}`;
+   }
  }else if(s.status==="finished"){
-  st.innerHTML="🏁 GAME FINISHED";finishBtn.classList.add("hidden");restartTopBtn.classList.remove("hidden");renderFinal(s.finished_stats);
+   st.innerHTML="🏁 GAME FINISHED";
+   finishBtn.classList.add("hidden");
+   restartTopBtn.classList.remove("hidden");
+   renderFinal(s.finished_stats);
  }
 }
 
@@ -182,18 +239,48 @@ function renderFinal(f){
  document.getElementById("lowest").textContent=f.lowest_score;
  document.getElementById("popular").textContent=f.most_popular_number?f.most_popular_number.join(", "):"—";
  document.getElementById("rolledMost").textContent=f.number_rolled_most_often?f.number_rolled_most_often.join(", "):"—";
- const rank=document.getElementById("finalRanking");rank.innerHTML="";
- f.ranking.slice(0,10).forEach((p,i)=>rank.innerHTML+=`<div>${medals(i)} ${escapeHtml(p.name)}</div><b>${p.score}</b>`);
+ const rank=document.getElementById("finalRanking");
+ rank.innerHTML="";
+ f.ranking.slice(0,10).forEach((p,i)=>{
+   rank.innerHTML+=`<div>${medals(i)} ${escapeHtml(p.name)}</div><b>${p.score}</b>`;
+ });
 }
 
-async function lockPredictions(){try{render((await api("/api/lock",{room,teacher_token:teacherToken})).state)}catch(e){alert(e.message)}}
-async function setResult(result){try{render((await api("/api/result",{room,teacher_token:teacherToken,result})).state)}catch(e){alert(e.message)}}
-async function nextRound(){try{render((await api("/api/next",{room,teacher_token:teacherToken})).state)}catch(e){alert(e.message)}}
+async function lockAndRoll(){
+ if(rolling)return;
+ const count=Number(document.getElementById("predictions").textContent||0);
+ if(count===0){
+   if(!confirm("No predictions have been submitted yet. Roll anyway?"))return;
+ }
+ try{
+   const d=await api("/api/lock-roll",{room,teacher_token:teacherToken});
+   await animateDie(d.result);
+   render(d.state);
+ }catch(e){
+   rolling=false;
+   document.getElementById("rollBtn").disabled=false;
+   alert(e.message);
+ }
+}
+
+async function nextRound(){
+ try{
+   const d=await api("/api/next",{room,teacher_token:teacherToken});
+   render(d.state);
+ }catch(e){alert(e.message)}
+}
+
 async function finishGame(){
  if(!confirm("Finish this game now?"))return;
- try{render((await api("/api/finish",{room,teacher_token:teacherToken})).state)}catch(e){alert(e.message)}
+ try{
+   const d=await api("/api/finish",{room,teacher_token:teacherToken});
+   render(d.state);
+ }catch(e){alert(e.message)}
 }
-function downloadCSV(){location.href=`/export.csv?room=${encodeURIComponent(room)}&teacher_token=${encodeURIComponent(teacherToken)}`}
+
+function downloadCSV(){
+ location.href=`/export.csv?room=${encodeURIComponent(room)}&teacher_token=${encodeURIComponent(teacherToken)}`;
+}
 
 function startNewGame(){
  if(pollTimer){clearInterval(pollTimer);pollTimer=null;}
@@ -205,18 +292,24 @@ function startNewGame(){
 
 function startPolling(){
  if(pollTimer)clearInterval(pollTimer);
- pollTimer=setInterval(async()=>{if(!room)return;try{render((await api(`/api/state?room=${encodeURIComponent(room)}`)).state)}catch(e){}},1000);
+ pollTimer=setInterval(async()=>{
+   if(!room)return;
+   try{
+     const d=await api(`/api/state?room=${encodeURIComponent(room)}`);
+     if(!rolling)render(d.state);
+   }catch(e){}
+ },700);
 }
 
 (async function restore(){
  if(!room||!teacherToken)return;
  try{
-  const d=await api(`/api/state?room=${encodeURIComponent(room)}`);
-  showGame();render(d.state);startPolling();
+   const d=await api(`/api/state?room=${encodeURIComponent(room)}`);
+   showGame();render(d.state);startPolling();
  }catch(e){
-  sessionStorage.removeItem("sc_teacher_room");
-  sessionStorage.removeItem("sc_teacher_token");
-  room="";teacherToken="";
+   sessionStorage.removeItem("sc_teacher_room");
+   sessionStorage.removeItem("sc_teacher_token");
+   room="";teacherToken="";
  }
 })();
 </script>
