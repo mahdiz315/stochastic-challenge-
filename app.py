@@ -62,6 +62,7 @@ def init_db():
             player_id TEXT NOT NULL,
             mode TEXT NOT NULL,
             target INTEGER NOT NULL,
+            target2 INTEGER,
             PRIMARY KEY (room, player_id)
         );
 
@@ -71,6 +72,14 @@ def init_db():
             die2 INTEGER NOT NULL
         );
         """)
+
+        # Migration for older versions that only stored one bonus target.
+        bonus_columns = {
+            row[1] for row in conn.execute("PRAGMA table_info(bonus_choices)").fetchall()
+        }
+        if "target2" not in bonus_columns:
+            conn.execute("ALTER TABLE bonus_choices ADD COLUMN target2 INTEGER")
+
         conn.commit()
         conn.close()
 
@@ -213,7 +222,7 @@ def public_state(room, player_id=None):
             }
 
             bc = conn.execute(
-                "SELECT mode, target FROM bonus_choices "
+                "SELECT mode, target, target2 FROM bonus_choices "
                 "WHERE room=? AND player_id=?",
                 (room, player_id)
             ).fetchone()
@@ -223,20 +232,23 @@ def public_state(room, player_id=None):
                 won = None
 
                 if bonus_result_row:
-                    target = bc["target"]
                     if bc["mode"] == "one":
-                        won = target == bonus_result_row["die1"]
+                        # ONE DIE: predict Die 1 only.
+                        won = bc["target"] == bonus_result_row["die1"]
                         earned = 20 if won else 0
                     else:
+                        # TWO DICE: predict each die separately.
+                        # Win if either corresponding prediction is correct.
                         won = (
-                            target == bonus_result_row["die1"]
-                            or target == bonus_result_row["die2"]
+                            bc["target"] == bonus_result_row["die1"]
+                            or bc["target2"] == bonus_result_row["die2"]
                         )
                         earned = 10 if won else 0
 
                 own_bonus = {
                     "mode": bc["mode"],
-                    "target": bc["target"],
+                    "target1": bc["target"],
+                    "target2": bc["target2"],
                     "won": won,
                     "earned": earned,
                 }
@@ -548,15 +560,27 @@ def bonus_choice():
     mode = str(data.get("mode", "")).strip()
 
     try:
-        target = int(data.get("target"))
+        target1 = int(data.get("target1"))
     except Exception:
-        target = 0
+        target1 = 0
+
+    raw_target2 = data.get("target2")
+    try:
+        target2 = int(raw_target2) if raw_target2 is not None else None
+    except Exception:
+        target2 = None
 
     if mode not in ("one", "two"):
-        return jsonify({"ok": False, "error": "Choose one-die or two-dice challenge."}), 400
+        return jsonify({"ok": False, "error": "Choose ONE DIE or TWO DICE."}), 400
 
-    if target not in range(1, 7):
-        return jsonify({"ok": False, "error": "Choose a target number from 1 to 6."}), 400
+    if target1 not in range(1, 7):
+        return jsonify({"ok": False, "error": "Choose the prediction for Die 1 (1 to 6)."}), 400
+
+    if mode == "two" and target2 not in range(1, 7):
+        return jsonify({"ok": False, "error": "Choose the prediction for Die 2 (1 to 6)."}), 400
+
+    if mode == "one":
+        target2 = None
 
     with db_lock:
         conn = db()
@@ -583,11 +607,11 @@ def bonus_choice():
             return jsonify({"ok": False, "error": "Student not found."}), 403
 
         conn.execute(
-            "INSERT INTO bonus_choices(room, player_id, mode, target) "
-            "VALUES(?,?,?,?) "
+            "INSERT INTO bonus_choices(room, player_id, mode, target, target2) "
+            "VALUES(?,?,?,?,?) "
             "ON CONFLICT(room, player_id) DO UPDATE SET "
-            "mode=excluded.mode, target=excluded.target",
-            (room, player_id, mode, target)
+            "mode=excluded.mode, target=excluded.target, target2=excluded.target2",
+            (room, player_id, mode, target1, target2)
         )
 
         conn.commit()
@@ -629,7 +653,7 @@ def bonus_roll():
         )
 
         choices = conn.execute(
-            "SELECT player_id, mode, target FROM bonus_choices WHERE room=?",
+            "SELECT player_id, mode, target, target2 FROM bonus_choices WHERE room=?",
             (room,)
         ).fetchall()
 
@@ -638,12 +662,15 @@ def bonus_roll():
             points = 0
 
             if ch["mode"] == "one":
+                # Predict only Die 1.
                 won = ch["target"] == die1
                 points = 20 if won else 0
             else:
+                # Predict Die 1 and Die 2 separately.
+                # A correct prediction on either corresponding die wins +10.
                 won = (
                     ch["target"] == die1
-                    or ch["target"] == die2
+                    or ch["target2"] == die2
                 )
                 points = 10 if won else 0
 
@@ -778,8 +805,15 @@ def export_csv():
     writer.writerow([])
     writer.writerow(["FINAL BONUS CHALLENGE"])
     writer.writerow([
-        "Student", "Bonus Mode", "Target Number",
-        "Bonus Die 1", "Bonus Die 2", "Final Score"
+        "Student",
+        "Bonus Mode",
+        "Predicted Die 1",
+        "Predicted Die 2",
+        "Actual Die 1",
+        "Actual Die 2",
+        "Bonus Won?",
+        "Bonus Points",
+        "Final Score",
     ])
 
     bonus_result = conn.execute(
@@ -795,17 +829,36 @@ def export_csv():
 
     for student in students:
         bc = conn.execute(
-            "SELECT mode, target FROM bonus_choices "
+            "SELECT mode, target, target2 FROM bonus_choices "
             "WHERE room=? AND player_id=?",
             (room, student["player_id"])
         ).fetchone()
 
+        bonus_won = ""
+        bonus_points = ""
+
+        if bc and bonus_result:
+            if bc["mode"] == "one":
+                won = bc["target"] == bonus_result["die1"]
+                bonus_points = 20 if won else 0
+            else:
+                won = (
+                    bc["target"] == bonus_result["die1"]
+                    or bc["target2"] == bonus_result["die2"]
+                )
+                bonus_points = 10 if won else 0
+
+            bonus_won = "Yes" if won else "No"
+
         writer.writerow([
             student["name"],
-            bc["mode"] if bc else "",
+            "ONE DIE" if bc and bc["mode"] == "one" else ("TWO DICE" if bc else ""),
             bc["target"] if bc else "",
+            bc["target2"] if bc and bc["mode"] == "two" else "",
             bonus_result["die1"] if bonus_result else "",
             bonus_result["die2"] if bonus_result else "",
+            bonus_won,
+            bonus_points,
             student["score"],
         ])
 
