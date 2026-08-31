@@ -4,984 +4,320 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Stochastic Challenge</title>
-
 <style>
-:root{
-  --text:#0f172a;
-  --muted:#64748b;
-  --accent:#2563eb;
-  --accent-soft:#dbeafe;
-  --success:#16a34a;
-  --warning:#f59e0b;
-}
-
+:root{--text:#0f172a;--muted:#64748b;--accent:#2563eb;--success:#16a34a;--warning:#f59e0b}
 *{box-sizing:border-box}
-
-body{
-  margin:0;
-  font-family:Arial,Helvetica,sans-serif;
-  background:linear-gradient(160deg,#dbeafe,#f8fafc);
-  color:var(--text);
-  min-height:100vh;
-}
-
-.wrap{
-  max-width:620px;
-  margin:auto;
-  padding:18px;
-}
-
-h1{
-  text-align:center;
-  font-size:34px;
-  margin:8px 0;
-  line-height:1.15;
-}
-
-.sub{
-  text-align:center;
-  color:var(--muted);
-  margin-bottom:18px;
-  font-size:18px;
-}
-
-.card{
-  background:white;
-  border-radius:22px;
-  padding:22px;
-  box-shadow:0 14px 35px rgba(15,23,42,.12);
-  margin-top:18px;
-}
-
-input{
-  width:100%;
-  font-size:20px;
-  padding:15px;
-  border:1px solid #cbd5e1;
-  border-radius:12px;
-  margin:7px 0;
-}
-
-button{
-  border:0;
-  border-radius:14px;
-  font-weight:800;
-  cursor:pointer;
-}
-
-.join{
-  width:100%;
-  background:var(--accent);
-  color:white;
-  font-size:20px;
-  padding:15px;
-  margin-top:10px;
-}
-
-.join:disabled{opacity:.65}
-
-.round{
-  text-align:center;
-  font-size:24px;
-  font-weight:800;
-}
-
-.status{
-  text-align:center;
-  background:#eff6ff;
-  border-radius:14px;
-  padding:16px;
-  margin:14px 0;
-  font-size:19px;
-  line-height:1.35;
-}
-
-.numbers{
-  display:grid;
-  grid-template-columns:repeat(3,1fr);
-  gap:10px;
-  margin-top:14px;
-}
-
-.num{
-  min-height:74px;
-  font-size:32px;
-  background:#e2e8f0;
-  color:#0f172a;
-}
-
-.num.selected{
-  background:var(--accent);
-  color:white;
-  outline:4px solid #93c5fd;
-}
-
-.dieArea{
-  text-align:center;
-  margin:14px 0;
-  padding:14px;
-  background:#f8fafc;
-  border-radius:16px;
-  border:1px solid #cbd5e1;
-}
-
-.dieFace{
-  font-size:88px;
-  line-height:1.05;
-  min-height:94px;
-}
-
-.dieText{
-  font-size:21px;
-  font-weight:800;
-  margin-top:6px;
-}
-
-.score{
-  text-align:center;
-  font-size:21px;
-  margin-top:16px;
-}
-
-.score b{
-  font-size:32px;
-}
-
-.hidden{
-  display:none!important;
-}
-
-.error{
-  color:#b91c1c;
-  text-align:center;
-  margin-top:10px;
-  min-height:24px;
-}
-
-.bonusCard{
-  background:#fff7ed;
-  border:2px solid var(--warning);
-  border-radius:18px;
-  padding:16px;
-  margin-top:14px;
-}
-
-.bonusTitle{
-  text-align:center;
-  margin:0 0 12px;
-  font-size:26px;
-}
-
-.bonusInstruction{
-  text-align:center;
-  background:white;
-  border-radius:12px;
-  padding:12px;
-  margin-bottom:14px;
-  font-size:18px;
-  line-height:1.35;
-}
-
-.riskOptions{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-  margin-top:12px;
-}
-
-.riskBtn{
-  padding:14px 10px;
-  min-height:138px;
-  font-size:16px;
-  background:#e2e8f0;
-  color:#0f172a;
-  text-align:center;
-  line-height:1.3;
-}
-
-.riskBtn .icon{
-  display:block;
-  font-size:30px;
-  margin-bottom:4px;
-}
-
-.riskBtn .riskName{
-  display:block;
-  font-size:19px;
-  margin-bottom:6px;
-}
-
-.riskBtn.selected{
-  background:var(--accent);
-  color:white;
-  outline:4px solid #93c5fd;
-}
-
-.bonusSubmit{
-  width:100%;
-  background:var(--success);
-  color:white;
-  font-size:19px;
-  padding:15px;
-  margin-top:14px;
-}
-
-.bonusMessage{
-  text-align:center;
-  margin-top:10px;
-  font-weight:800;
-  line-height:1.35;
-}
-
-.bonusResult{
-  background:#ecfdf5;
-  border:2px solid var(--success);
-  border-radius:16px;
-  padding:16px;
-  text-align:center;
-  margin-top:14px;
-}
-
-.bonusDice{
-  font-size:72px;
-  line-height:1.1;
-}
-
-.bonusResultText{
-  font-size:20px;
-  font-weight:800;
-  line-height:1.4;
-  margin-top:8px;
-}
-
-@media(max-width:420px){
-  .wrap{padding:12px}
-  h1{font-size:30px}
-  .card{padding:18px}
-  .num{min-height:68px;font-size:29px}
-  .riskOptions{grid-template-columns:1fr 1fr}
-  .riskBtn{font-size:14px;padding:12px 8px;min-height:128px}
-  .riskBtn .riskName{font-size:17px}
-}
+body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(160deg,#dbeafe,#f8fafc);color:var(--text);min-height:100vh}
+.wrap{max-width:620px;margin:auto;padding:16px}
+.card{background:white;border-radius:22px;padding:20px;box-shadow:0 14px 35px rgba(15,23,42,.12);margin-top:18px}
+h1{text-align:center;font-size:34px;margin:8px 0;line-height:1.15}.sub{text-align:center;color:var(--muted);margin-bottom:18px;font-size:18px}
+input{width:100%;font-size:20px;padding:15px;border:1px solid #cbd5e1;border-radius:12px;margin:7px 0}
+button{border:0;border-radius:14px;font-weight:800;cursor:pointer}.join{width:100%;background:var(--accent);color:white;font-size:20px;padding:15px;margin-top:10px}
+.round{text-align:center;font-size:24px;font-weight:800}.status{text-align:center;background:#eff6ff;border-radius:14px;padding:15px;margin:14px 0;font-size:19px;line-height:1.35}
+.numbers,.bonusNumbers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:12px}
+.num,.bonusNum{min-height:70px;font-size:30px;background:#e2e8f0;color:#0f172a}
+.num.selected,.bonusNum.selected{background:var(--accent);color:white;outline:4px solid #93c5fd}
+.dieArea{text-align:center;margin:14px 0;padding:14px;background:#f8fafc;border-radius:16px;border:1px solid #cbd5e1}
+.dieFace{font-size:88px;line-height:1.05;min-height:94px}.dieText{font-size:21px;font-weight:800;margin-top:6px}
+.score{text-align:center;font-size:21px;margin-top:16px}.score b{font-size:32px}.hidden{display:none!important}
+.error{color:#b91c1c;text-align:center;margin-top:10px;min-height:24px}
+.bonusCard{background:#fff7ed;border:2px solid var(--warning);border-radius:18px;padding:16px;margin-top:14px}
+.bonusTitle{text-align:center;margin:0 0 10px;font-size:25px}
+.riskOptions{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+.riskBtn{padding:13px 8px;min-height:128px;font-size:15px;background:#e2e8f0;color:#0f172a;text-align:center;line-height:1.28}
+.riskBtn.selected{background:var(--accent);color:white;outline:4px solid #93c5fd}
+.riskName{display:block;font-size:18px;margin:5px 0}.icon{display:block;font-size:28px}
+.picker{background:white;border-radius:14px;padding:12px;margin-top:12px;border:1px solid #fed7aa}
+.pickerTitle{text-align:center;font-size:18px;font-weight:800;margin:0}
+.pickerHint{text-align:center;color:var(--muted);font-size:14px;margin-top:4px}
+.bonusSubmit{width:100%;background:var(--success);color:white;font-size:19px;padding:15px;margin-top:14px}
+.bonusMessage{text-align:center;margin-top:10px;font-weight:800;line-height:1.4}
+.bonusResult{background:#ecfdf5;border:2px solid var(--success);border-radius:16px;padding:16px;text-align:center;margin-top:14px}
+.bonusDice{font-size:72px}.bonusResultText{font-size:19px;font-weight:800;line-height:1.45;margin-top:8px}
+@media(max-width:420px){h1{font-size:29px}.card{padding:17px}.riskBtn{font-size:13px;min-height:122px}.riskName{font-size:16px}}
 </style>
 </head>
-
 <body>
 <div class="wrap">
-
 <h1>🎲 STOCHASTIC CHALLENGE</h1>
 <div class="sub">Pick a number. Can you beat randomness?</div>
 
 <div id="joinCard" class="card">
-  <h2>Join the game</h2>
-
-  <input
-    id="room"
-    inputmode="numeric"
-    maxlength="4"
-    placeholder="Room code">
-
-  <input
-    id="name"
-    maxlength="40"
-    placeholder="Your name">
-
-  <button
-    id="joinBtn"
-    class="join"
-    onclick="joinGame()">
-    JOIN
-  </button>
-
-  <div id="joinError" class="error"></div>
+<h2>Join the game</h2>
+<input id="room" inputmode="numeric" maxlength="4" placeholder="Room code">
+<input id="name" maxlength="40" placeholder="Your name">
+<button id="joinBtn" class="join" onclick="joinGame()">JOIN</button>
+<div id="joinError" class="error"></div>
 </div>
-
 
 <div id="playCard" class="card hidden">
+<div id="round" class="round">Round 1 / 20</div>
+<div id="status" class="status">Choose your number</div>
 
-  <div id="round" class="round">
-    Round 1 / 20
-  </div>
+<div id="regularNumbers" class="numbers">
+<button class="num" data-n="1" onclick="chooseRegular(1)">1</button>
+<button class="num" data-n="2" onclick="chooseRegular(2)">2</button>
+<button class="num" data-n="3" onclick="chooseRegular(3)">3</button>
+<button class="num" data-n="4" onclick="chooseRegular(4)">4</button>
+<button class="num" data-n="5" onclick="chooseRegular(5)">5</button>
+<button class="num" data-n="6" onclick="chooseRegular(6)">6</button>
+</div>
 
-  <div id="status" class="status">
-    Choose your number
-  </div>
+<div id="dieArea" class="dieArea">
+<div id="dieFace" class="dieFace">🎲</div>
+<div id="dieText" class="dieText">Waiting for the roll</div>
+</div>
 
+<div id="bonusCard" class="bonusCard hidden">
+<h2 class="bonusTitle">🎯 FINAL BONUS CHALLENGE</h2>
+<div class="status" style="margin:8px 0 10px">
+Choose your risk first, then make the prediction for each die.
+</div>
 
-  <div id="numbers" class="numbers">
-    <button class="num" data-n="1" onclick="choose(1)">1</button>
-    <button class="num" data-n="2" onclick="choose(2)">2</button>
-    <button class="num" data-n="3" onclick="choose(3)">3</button>
-    <button class="num" data-n="4" onclick="choose(4)">4</button>
-    <button class="num" data-n="5" onclick="choose(5)">5</button>
-    <button class="num" data-n="6" onclick="choose(6)">6</button>
-  </div>
+<div class="riskOptions">
+<button id="oneDieBtn" class="riskBtn" onclick="selectBonusMode('one')">
+<span class="icon">🎲</span>
+<span class="riskName">ONE DIE</span>
+Predict <b>Die 1</b><br>
+Correct → <b>+20</b><br>
+Chance 1/6 ≈ 16.7%
+</button>
 
+<button id="twoDiceBtn" class="riskBtn" onclick="selectBonusMode('two')">
+<span class="icon">🎲🎲</span>
+<span class="riskName">TWO DICE</span>
+Predict <b>Die 1 & Die 2</b><br>
+Either correct → <b>+10</b><br>
+Chance 11/36 ≈ 30.6%
+</button>
+</div>
 
-  <!-- Regular-round die display.
-       Hidden during bonus choice so the phone screen stays compact. -->
-  <div id="dieArea" class="dieArea">
-    <div id="dieFace" class="dieFace">🎲</div>
-    <div id="dieText" class="dieText">Waiting for the roll</div>
-  </div>
-
-
-  <!-- Compact final bonus interface -->
-  <div id="bonusCard" class="bonusCard hidden">
-
-    <h2 class="bonusTitle">
-      🎯 FINAL BONUS CHALLENGE
-    </h2>
-
-    <div class="bonusInstruction">
-      <b>Step 1:</b> Choose your target number above.<br>
-      <b>Step 2:</b> Choose your risk below.
-    </div>
-
-    <div class="riskOptions">
-
-      <button
-        id="oneDieBtn"
-        class="riskBtn"
-        onclick="selectBonusMode('one')">
-
-        <span class="icon">🎲</span>
-        <span class="riskName">ONE DIE</span>
-
-        Match Die 1<br>
-        <b>+20 points</b><br>
-        1/6 ≈ 16.7%
-      </button>
-
-
-      <button
-        id="twoDiceBtn"
-        class="riskBtn"
-        onclick="selectBonusMode('two')">
-
-        <span class="icon">🎲🎲</span>
-        <span class="riskName">TWO DICE</span>
-
-        Either die matches<br>
-        <b>+10 points</b><br>
-        11/36 ≈ 30.6%
-      </button>
-
-    </div>
-
-    <button
-      class="bonusSubmit"
-      onclick="submitBonusChoice()">
-      🔒 LOCK MY BONUS CHOICE
-    </button>
-
-    <div
-      id="bonusMessage"
-      class="bonusMessage">
-    </div>
-
-  </div>
-
-
-  <!-- Appears only AFTER teacher rolls bonus dice -->
-  <div id="bonusResult" class="bonusResult hidden">
-
-    <div
-      id="bonusDice"
-      class="bonusDice">
-    </div>
-
-    <div
-      id="bonusResultText"
-      class="bonusResultText">
-    </div>
-
-  </div>
-
-
-  <div class="score">
-    Your score:
-    <b id="score">0</b>
-  </div>
-
+<div id="target1Picker" class="picker hidden">
+<p class="pickerTitle">Prediction for Die 1</p>
+<p class="pickerHint">Which number do you think Die 1 will show?</p>
+<div class="bonusNumbers">
+<button class="bonusNum t1" data-n="1" onclick="chooseBonusTarget(1,1)">1</button>
+<button class="bonusNum t1" data-n="2" onclick="chooseBonusTarget(1,2)">2</button>
+<button class="bonusNum t1" data-n="3" onclick="chooseBonusTarget(1,3)">3</button>
+<button class="bonusNum t1" data-n="4" onclick="chooseBonusTarget(1,4)">4</button>
+<button class="bonusNum t1" data-n="5" onclick="chooseBonusTarget(1,5)">5</button>
+<button class="bonusNum t1" data-n="6" onclick="chooseBonusTarget(1,6)">6</button>
 </div>
 </div>
 
+<div id="target2Picker" class="picker hidden">
+<p class="pickerTitle">Prediction for Die 2</p>
+<p class="pickerHint">Which number do you think Die 2 will show?</p>
+<div class="bonusNumbers">
+<button class="bonusNum t2" data-n="1" onclick="chooseBonusTarget(2,1)">1</button>
+<button class="bonusNum t2" data-n="2" onclick="chooseBonusTarget(2,2)">2</button>
+<button class="bonusNum t2" data-n="3" onclick="chooseBonusTarget(2,3)">3</button>
+<button class="bonusNum t2" data-n="4" onclick="chooseBonusTarget(2,4)">4</button>
+<button class="bonusNum t2" data-n="5" onclick="chooseBonusTarget(2,5)">5</button>
+<button class="bonusNum t2" data-n="6" onclick="chooseBonusTarget(2,6)">6</button>
+</div>
+</div>
+
+<button class="bonusSubmit" onclick="submitBonusChoice()">🔒 LOCK MY BONUS CHOICE</button>
+<div id="bonusMessage" class="bonusMessage"></div>
+</div>
+
+<div id="bonusResult" class="bonusResult hidden">
+<div id="bonusDice" class="bonusDice"></div>
+<div id="bonusResultText" class="bonusResultText"></div>
+</div>
+
+<div class="score">Your score: <b id="score">0</b></div>
+</div>
+</div>
 
 <script>
-let room = "";
-let pollTimer = null;
+let room="";
+let pollTimer=null;
+let lastAnimatedRound=0;
+let animating=false;
+let bonusMode=null;
+let target1=null;
+let target2=null;
 
-let lastAnimatedRound = 0;
-let animating = false;
+const dieFaces={1:"⚀",2:"⚁",3:"⚂",4:"⚃",5:"⚄",6:"⚅"};
 
-let bonusMode = null;
-let currentTarget = null;
-
-const dieFaces = {
-  1:"⚀",
-  2:"⚁",
-  3:"⚂",
-  4:"⚃",
-  5:"⚄",
-  6:"⚅"
-};
-
-
-let playerId = localStorage.getItem("sc_player_id");
-
-if (!playerId) {
-  playerId =
-    (window.crypto && crypto.randomUUID)
-      ? crypto.randomUUID()
-      : Math.random().toString(36).slice(2) + Date.now();
-
-  localStorage.setItem("sc_player_id", playerId);
+let playerId=localStorage.getItem("sc_player_id");
+if(!playerId){
+ playerId=(window.crypto&&crypto.randomUUID)?crypto.randomUUID():Math.random().toString(36).slice(2)+Date.now();
+ localStorage.setItem("sc_player_id",playerId);
 }
 
+const params=new URLSearchParams(location.search);
+if(params.get("room"))document.getElementById("room").value=params.get("room");
+if(localStorage.getItem("sc_player_name"))document.getElementById("name").value=localStorage.getItem("sc_player_name");
 
-const params = new URLSearchParams(window.location.search);
+async function api(path,body){
+ const r=await fetch(path,{method:body?"POST":"GET",headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined});
+ const d=await r.json().catch(()=>({ok:false,error:"Server error"}));
+ if(!r.ok||d.ok===false)throw new Error(d.error||"Request failed");
+ return d;
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
 
-if (params.get("room")) {
-  document.getElementById("room").value = params.get("room");
+async function joinGame(){
+ room=document.getElementById("room").value.trim();
+ const name=document.getElementById("name").value.trim();
+ const err=document.getElementById("joinError");
+ const btn=document.getElementById("joinBtn");
+ err.textContent="";
+ if(!room||!name){err.textContent="Please enter the room code and your name.";return}
+ btn.disabled=true;btn.textContent="JOINING...";
+ try{
+   const d=await api("/api/join",{room,name,player_id:playerId});
+   localStorage.setItem("sc_player_name",name);
+   document.getElementById("joinCard").classList.add("hidden");
+   document.getElementById("playCard").classList.remove("hidden");
+   render(d.state);startPolling();
+ }catch(e){err.textContent=e.message;btn.disabled=false;btn.textContent="JOIN"}
 }
 
-if (localStorage.getItem("sc_player_name")) {
-  document.getElementById("name").value =
-    localStorage.getItem("sc_player_name");
+async function chooseRegular(n){
+ try{render((await api("/api/predict",{room,player_id:playerId,choice:n})).state)}
+ catch(e){alert(e.message)}
 }
 
-
-async function api(path, body) {
-
-  const response = await fetch(path, {
-    method: body ? "POST" : "GET",
-    headers: body
-      ? {"Content-Type":"application/json"}
-      : {},
-    body: body
-      ? JSON.stringify(body)
-      : undefined
-  });
-
-  const data = await response.json().catch(() => ({
-    ok:false,
-    error:"Server error"
-  }));
-
-  if (!response.ok || data.ok === false) {
-    throw new Error(data.error || "Request failed");
-  }
-
-  return data;
+function selectBonusMode(mode){
+ bonusMode=mode;
+ document.getElementById("oneDieBtn").classList.toggle("selected",mode==="one");
+ document.getElementById("twoDiceBtn").classList.toggle("selected",mode==="two");
+ document.getElementById("target1Picker").classList.remove("hidden");
+ document.getElementById("target2Picker").classList.toggle("hidden",mode!=="two");
+ if(mode==="one")target2=null;
+ refreshBonusSelections();
+ updateBonusMessage();
 }
 
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
+function chooseBonusTarget(which,n){
+ if(which===1)target1=n;
+ else target2=n;
+ refreshBonusSelections();
+ updateBonusMessage();
 }
 
-
-async function joinGame() {
-
-  room =
-    document.getElementById("room").value.trim();
-
-  const name =
-    document.getElementById("name").value.trim();
-
-  const error =
-    document.getElementById("joinError");
-
-  const button =
-    document.getElementById("joinBtn");
-
-  error.textContent = "";
-
-  if (!room || !name) {
-    error.textContent =
-      "Please enter the room code and your name.";
-    return;
-  }
-
-  button.disabled = true;
-  button.textContent = "JOINING...";
-
-  try {
-
-    const data = await api("/api/join", {
-      room,
-      name,
-      player_id: playerId
-    });
-
-    localStorage.setItem("sc_player_name", name);
-    localStorage.setItem("sc_room", room);
-
-    document
-      .getElementById("joinCard")
-      .classList.add("hidden");
-
-    document
-      .getElementById("playCard")
-      .classList.remove("hidden");
-
-    render(data.state);
-    startPolling();
-
-  } catch (e) {
-
-    error.textContent = e.message;
-
-    button.disabled = false;
-    button.textContent = "JOIN";
-  }
+function refreshBonusSelections(){
+ document.querySelectorAll(".t1").forEach(b=>b.classList.toggle("selected",Number(b.dataset.n)===target1));
+ document.querySelectorAll(".t2").forEach(b=>b.classList.toggle("selected",Number(b.dataset.n)===target2));
 }
 
-
-async function choose(n) {
-
-  const bonusVisible =
-    !document
-      .getElementById("bonusCard")
-      .classList.contains("hidden");
-
-  /* In the bonus round, number buttons are local until
-     student locks the complete bonus choice. */
-  if (bonusVisible) {
-
-    currentTarget = n;
-
-    document
-      .querySelectorAll(".num")
-      .forEach(btn => {
-        btn.classList.toggle(
-          "selected",
-          Number(btn.dataset.n) === n
-        );
-      });
-
-    updateBonusMessage();
-    return;
-  }
-
-
-  try {
-
-    const data = await api("/api/predict", {
-      room,
-      player_id: playerId,
-      choice: n
-    });
-
-    render(data.state);
-
-  } catch (e) {
-    alert(e.message);
-  }
+function updateBonusMessage(){
+ const m=document.getElementById("bonusMessage");
+ if(!bonusMode){m.textContent="Choose ONE DIE or TWO DICE.";return}
+ if(!target1){m.textContent="Now choose your prediction for Die 1.";return}
+ if(bonusMode==="two"&&!target2){m.textContent=`Die 1 prediction = ${target1}. Now choose Die 2.`;return}
+ m.textContent=bonusMode==="one"
+   ? `Selected: ONE DIE — predict Die 1 = ${target1}. Possible +20 points.`
+   : `Selected: TWO DICE — predict Die 1 = ${target1}, Die 2 = ${target2}. Possible +10 points if either is correct.`;
 }
 
-
-function selectBonusMode(mode) {
-
-  bonusMode = mode;
-
-  document
-    .getElementById("oneDieBtn")
-    .classList.toggle(
-      "selected",
-      mode === "one"
-    );
-
-  document
-    .getElementById("twoDiceBtn")
-    .classList.toggle(
-      "selected",
-      mode === "two"
-    );
-
-  updateBonusMessage();
+async function submitBonusChoice(){
+ if(!bonusMode){alert("Choose ONE DIE or TWO DICE.");return}
+ if(!target1){alert("Choose your prediction for Die 1.");return}
+ if(bonusMode==="two"&&!target2){alert("Choose your prediction for Die 2.");return}
+ try{
+   const d=await api("/api/bonus-choice",{
+     room,player_id:playerId,mode:bonusMode,target1,target2:bonusMode==="two"?target2:null
+   });
+   render(d.state);
+ }catch(e){alert(e.message)}
 }
 
-
-function updateBonusMessage() {
-
-  const msg =
-    document.getElementById("bonusMessage");
-
-  if (currentTarget && bonusMode) {
-
-    msg.textContent =
-      bonusMode === "one"
-        ? `Selected: Number ${currentTarget} + ONE DIE (+20 if correct)`
-        : `Selected: Number ${currentTarget} + TWO DICE (+10 if either matches)`;
-
-  } else if (currentTarget) {
-
-    msg.textContent =
-      `Number ${currentTarget} selected. Now choose ONE DIE or TWO DICE.`;
-
-  } else if (bonusMode) {
-
-    msg.textContent =
-      "Risk selected. Now choose your target number 1–6.";
-
-  } else {
-
-    msg.textContent = "";
-  }
+async function animateDie(result,roundNo){
+ animating=true;
+ const f=document.getElementById("dieFace"),t=document.getElementById("dieText");
+ t.textContent="Rolling...";
+ for(let i=0;i<9;i++){f.textContent=dieFaces[1+Math.floor(Math.random()*6)];await sleep(90)}
+ f.textContent=dieFaces[result];t.textContent=`RESULT = ${result}`;lastAnimatedRound=roundNo;animating=false;
 }
 
+function render(s){
+ document.getElementById("score").textContent=s.own?s.own.score:0;
+ const round=document.getElementById("round");
+ const status=document.getElementById("status");
+ const regular=document.getElementById("regularNumbers");
+ const dieArea=document.getElementById("dieArea");
+ const bonusCard=document.getElementById("bonusCard");
+ const bonusResult=document.getElementById("bonusResult");
 
-async function submitBonusChoice() {
+ bonusCard.classList.add("hidden");
+ bonusResult.classList.add("hidden");
 
-  if (!currentTarget) {
-    alert("Choose your target number 1–6 first.");
-    return;
-  }
+ if(s.status==="accepting"){
+   round.textContent=`Round ${s.round} / ${s.total_rounds}`;
+   regular.classList.remove("hidden");dieArea.classList.remove("hidden");
+   document.querySelectorAll(".num").forEach(b=>{
+     b.disabled=false;
+     b.classList.toggle("selected",Boolean(s.own&&s.own.prediction===Number(b.dataset.n)));
+   });
+   status.innerHTML=s.own&&s.own.prediction
+     ? `✓ Your choice: <b>${s.own.prediction}</b><br>Waiting for the teacher to lock and roll...`
+     : "Choose one number";
+   if(!animating){document.getElementById("dieFace").textContent="🎲";document.getElementById("dieText").textContent="Waiting for the roll"}
+ }
+ else if(s.status==="result"){
+   round.textContent=`Round ${s.round} / ${s.total_rounds}`;
+   regular.classList.remove("hidden");dieArea.classList.remove("hidden");
+   document.querySelectorAll(".num").forEach(b=>b.disabled=true);
+   const picked=s.own?s.own.prediction:null;
+   status.innerHTML=`🎲 Result = <b>${s.result}</b><br>${picked===s.result?"🎉 Correct! +1 point":"Not this time — next round!"}`;
+   if(lastAnimatedRound!==s.round&&!animating)animateDie(s.result,s.round);
+   else if(!animating){document.getElementById("dieFace").textContent=dieFaces[s.result];document.getElementById("dieText").textContent=`RESULT = ${s.result}`}
+ }
+ else if(s.status==="bonus_choice"){
+   round.textContent="FINAL BONUS CHALLENGE";
+   status.textContent="Choose your risk and make your die prediction(s).";
+   regular.classList.add("hidden");
+   dieArea.classList.add("hidden");
+   bonusCard.classList.remove("hidden");
 
-  if (!bonusMode) {
-    alert("Choose ONE DIE or TWO DICE.");
-    return;
-  }
-
-  try {
-
-    const data = await api("/api/bonus-choice", {
-      room,
-      player_id: playerId,
-      mode: bonusMode,
-      target: currentTarget
-    });
-
-    render(data.state);
-
-  } catch (e) {
-    alert(e.message);
-  }
+   if(s.own_bonus){
+     bonusMode=s.own_bonus.mode;
+     target1=s.own_bonus.target1;
+     target2=s.own_bonus.target2;
+     selectBonusMode(bonusMode);
+     document.getElementById("bonusMessage").textContent=bonusMode==="one"
+       ? `🔒 LOCKED: ONE DIE — predicted Die 1 = ${target1}.`
+       : `🔒 LOCKED: TWO DICE — predicted Die 1 = ${target1}, Die 2 = ${target2}.`;
+   }else{
+     if(bonusMode)selectBonusMode(bonusMode);
+     else updateBonusMessage();
+   }
+   refreshBonusSelections();
+ }
+ else if(s.status==="finished"){
+   round.textContent="FINAL RESULT";
+   regular.classList.add("hidden");dieArea.classList.add("hidden");bonusCard.classList.add("hidden");
+   if(s.bonus_result){
+     bonusResult.classList.remove("hidden");
+     document.getElementById("bonusDice").textContent=`${dieFaces[s.bonus_result.die1]} ${dieFaces[s.bonus_result.die2]}`;
+     if(s.own_bonus){
+       const pred=s.own_bonus.mode==="one"
+         ? `You predicted Die 1 = ${s.own_bonus.target1}.`
+         : `You predicted Die 1 = ${s.own_bonus.target1} and Die 2 = ${s.own_bonus.target2}.`;
+       document.getElementById("bonusResultText").innerHTML=
+         `Actual: Die 1 = ${s.bonus_result.die1}, Die 2 = ${s.bonus_result.die2}<br>${pred}`;
+       status.innerHTML=(s.own_bonus.won?`🎉 YOU WON +${s.own_bonus.earned} BONUS POINTS!`:"No bonus points this time.")+
+         `<br>Your final score: <b>${s.own?s.own.score:0}</b>`;
+     }else{
+       document.getElementById("bonusResultText").textContent=`Actual: Die 1 = ${s.bonus_result.die1}, Die 2 = ${s.bonus_result.die2}`;
+       status.innerHTML=`🏁 Game finished!<br>Your final score: <b>${s.own?s.own.score:0}</b>`;
+     }
+   }else status.innerHTML=`🏁 Game finished!<br>Your final score: <b>${s.own?s.own.score:0}</b>`;
+ }
 }
 
-
-async function animateDie(result, roundNo) {
-
-  animating = true;
-
-  const face =
-    document.getElementById("dieFace");
-
-  const text =
-    document.getElementById("dieText");
-
-  text.textContent = "Rolling...";
-
-  for (let i = 0; i < 9; i++) {
-
-    face.textContent =
-      dieFaces[1 + Math.floor(Math.random() * 6)];
-
-    await sleep(90);
-  }
-
-  face.textContent = dieFaces[result];
-
-  text.textContent =
-    `RESULT = ${result}`;
-
-  lastAnimatedRound = roundNo;
-
-  animating = false;
-}
-
-
-function render(s) {
-
-  const round =
-    document.getElementById("round");
-
-  const status =
-    document.getElementById("status");
-
-  const numbers =
-    document.getElementById("numbers");
-
-  const dieArea =
-    document.getElementById("dieArea");
-
-  const bonusCard =
-    document.getElementById("bonusCard");
-
-  const bonusResult =
-    document.getElementById("bonusResult");
-
-
-  document.getElementById("score").textContent =
-    s.own ? s.own.score : 0;
-
-
-  bonusCard.classList.add("hidden");
-  bonusResult.classList.add("hidden");
-
-
-  /* ---------------------------
-     REGULAR ROUND: OPEN
-  ---------------------------- */
-  if (s.status === "accepting") {
-
-    round.textContent =
-      `Round ${s.round} / ${s.total_rounds}`;
-
-    numbers.classList.remove("hidden");
-    dieArea.classList.remove("hidden");
-
-    document
-      .querySelectorAll(".num")
-      .forEach(btn => {
-
-        const n =
-          Number(btn.dataset.n);
-
-        btn.disabled = false;
-
-        btn.classList.toggle(
-          "selected",
-          Boolean(
-            s.own &&
-            s.own.prediction === n
-          )
-        );
-      });
-
-
-    if (s.own && s.own.prediction) {
-
-      status.innerHTML =
-        `✓ Your choice: <b>${s.own.prediction}</b><br>` +
-        `Waiting for the teacher to lock and roll...`;
-
-    } else {
-
-      status.textContent =
-        "Choose one number";
-    }
-
-
-    if (!animating) {
-
-      document.getElementById("dieFace").textContent =
-        "🎲";
-
-      document.getElementById("dieText").textContent =
-        "Waiting for the roll";
-    }
-  }
-
-
-  /* ---------------------------
-     REGULAR ROUND: RESULT
-  ---------------------------- */
-  else if (s.status === "result") {
-
-    round.textContent =
-      `Round ${s.round} / ${s.total_rounds}`;
-
-    numbers.classList.remove("hidden");
-    dieArea.classList.remove("hidden");
-
-    document
-      .querySelectorAll(".num")
-      .forEach(btn => {
-        btn.disabled = true;
-      });
-
-
-    const picked =
-      s.own
-        ? s.own.prediction
-        : null;
-
-    const correct =
-      picked === s.result;
-
-
-    status.innerHTML =
-      `🎲 Result = <b>${s.result}</b><br>` +
-      (
-        correct
-          ? "🎉 Correct! +1 point"
-          : "Not this time — next round!"
-      );
-
-
-    if (
-      lastAnimatedRound !== s.round &&
-      !animating
-    ) {
-
-      animateDie(
-        s.result,
-        s.round
-      );
-
-    } else if (!animating) {
-
-      document.getElementById("dieFace").textContent =
-        dieFaces[s.result] || "🎲";
-
-      document.getElementById("dieText").textContent =
-        `RESULT = ${s.result}`;
-    }
-  }
-
-
-  /* ---------------------------
-     FINAL BONUS CHOICE
-  ---------------------------- */
-  else if (s.status === "bonus_choice") {
-
-    round.textContent =
-      "FINAL BONUS CHALLENGE";
-
-    status.innerHTML =
-      "🎯 Choose your target number and your risk option.";
-
-    numbers.classList.remove("hidden");
-
-    /* Important change:
-       hide the large dice area until teacher rolls. */
-    dieArea.classList.add("hidden");
-
-    bonusCard.classList.remove("hidden");
-
-
-    if (s.own_bonus) {
-
-      currentTarget =
-        s.own_bonus.target;
-
-      bonusMode =
-        s.own_bonus.mode;
-
-      selectBonusMode(bonusMode);
-    }
-
-
-    document
-      .querySelectorAll(".num")
-      .forEach(btn => {
-
-        btn.disabled = false;
-
-        btn.classList.toggle(
-          "selected",
-          Number(btn.dataset.n) === currentTarget
-        );
-      });
-
-
-    if (s.own_bonus) {
-
-      const msg =
-        document.getElementById("bonusMessage");
-
-      msg.textContent =
-        bonusMode === "one"
-          ? `🔒 Locked: Number ${currentTarget}, ONE DIE, possible +20 points`
-          : `🔒 Locked: Number ${currentTarget}, TWO DICE, possible +10 points`;
-
-    } else {
-
-      updateBonusMessage();
-    }
-  }
-
-
-  /* ---------------------------
-     GAME FINISHED
-  ---------------------------- */
-  else if (s.status === "finished") {
-
-    round.textContent =
-      "FINAL RESULT";
-
-    numbers.classList.add("hidden");
-    dieArea.classList.add("hidden");
-    bonusCard.classList.add("hidden");
-
-
-    if (s.bonus_result) {
-
-      bonusResult.classList.remove("hidden");
-
-      document.getElementById("bonusDice").textContent =
-        `${dieFaces[s.bonus_result.die1]} ${dieFaces[s.bonus_result.die2]}`;
-
-      document.getElementById("bonusResultText").textContent =
-        `Die 1 = ${s.bonus_result.die1}   |   Die 2 = ${s.bonus_result.die2}`;
-
-
-      if (s.own_bonus) {
-
-        const choiceLabel =
-          s.own_bonus.mode === "one"
-            ? "ONE DIE / +20"
-            : "TWO DICE / +10";
-
-
-        status.innerHTML =
-          `Your choice: <b>${choiceLabel}</b>, ` +
-          `number <b>${s.own_bonus.target}</b><br><br>` +
-          (
-            s.own_bonus.won
-              ? `🎉 YOU WON +${s.own_bonus.earned} POINTS!`
-              : `No bonus points this time.`
-          ) +
-          `<br><br>Your final score: ` +
-          `<b>${s.own ? s.own.score : 0}</b>`;
-
-      } else {
-
-        status.innerHTML =
-          `🏁 Game finished!<br>` +
-          `Your final score: ` +
-          `<b>${s.own ? s.own.score : 0}</b>`;
-      }
-
-    } else {
-
-      status.innerHTML =
-        `🏁 Game finished!<br>` +
-        `Your final score: ` +
-        `<b>${s.own ? s.own.score : 0}</b>`;
-    }
-  }
-}
-
-
-function startPolling() {
-
-  if (pollTimer) {
-    clearInterval(pollTimer);
-  }
-
-  pollTimer =
-    setInterval(async () => {
-
-      try {
-
-        const data = await api(
-          `/api/state?room=${encodeURIComponent(room)}` +
-          `&player_id=${encodeURIComponent(playerId)}`
-        );
-
-        render(data.state);
-
-      } catch (_) {
-        /* Keep trying while the classroom game runs. */
-      }
-
-    }, 700);
+function startPolling(){
+ if(pollTimer)clearInterval(pollTimer);
+ pollTimer=setInterval(async()=>{
+   try{render((await api(`/api/state?room=${encodeURIComponent(room)}&player_id=${encodeURIComponent(playerId)}`)).state)}
+   catch(e){}
+ },700);
 }
 </script>
-
 </body>
 </html>
