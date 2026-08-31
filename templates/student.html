@@ -14,12 +14,17 @@ body{margin:0;font-family:Arial,Helvetica,sans-serif;background:linear-gradient(
 h1{text-align:center;font-size:34px;margin:8px 0}.sub{text-align:center;color:var(--muted);margin-bottom:18px}
 input{width:100%;font-size:20px;padding:15px;border:1px solid #cbd5e1;border-radius:12px;margin:7px 0}
 button{border:0;border-radius:14px;font-weight:800;cursor:pointer}.join{width:100%;background:var(--accent);color:white;font-size:20px;padding:15px;margin-top:10px}
-.join:disabled{opacity:.65}.numbers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
+.numbers{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:18px}
 .num{height:90px;font-size:36px;background:#e2e8f0;color:#0f172a}.num.selected{background:#2563eb;color:white;outline:5px solid #93c5fd}
 .round{text-align:center;font-size:24px;font-weight:800}.status{text-align:center;background:#eff6ff;border-radius:14px;padding:18px;margin:15px 0;font-size:20px}
 .score{text-align:center;font-size:22px}.score b{font-size:34px}.hidden{display:none!important}.error{color:#b91c1c;text-align:center;margin-top:10px;min-height:24px}
 .dieArea{text-align:center;margin:16px 0;padding:16px;background:#f8fafc;border-radius:16px;border:1px solid #cbd5e1}
 .dieFace{font-size:105px;line-height:1.05;min-height:115px}.dieText{font-size:24px;font-weight:800}
+.bonusCard{background:#fff7ed;border:2px solid #f59e0b;border-radius:18px;padding:18px;margin-top:16px}
+.riskOptions{display:grid;grid-template-columns:1fr;gap:12px;margin-top:14px}
+.riskBtn{padding:18px;font-size:18px;background:#e2e8f0;color:#0f172a;text-align:left}
+.riskBtn.selected{background:#2563eb;color:white}
+.bonusSubmit{width:100%;background:#16a34a;color:white;font-size:20px;padding:15px;margin-top:14px}
 </style>
 </head>
 <body>
@@ -53,6 +58,29 @@ button{border:0;border-radius:14px;font-weight:800;cursor:pointer}.join{width:10
 <div id="dieText" class="dieText">Waiting for the roll</div>
 </div>
 
+<div id="bonusCard" class="bonusCard hidden">
+<h2>🎯 FINAL RISK / REWARD CHALLENGE</h2>
+<p><b>First choose your number 1–6 above.</b></p>
+<p>Then choose your risk:</p>
+
+<div class="riskOptions">
+<button id="oneDieBtn" class="riskBtn" onclick="selectBonusMode('one')">
+🎲 <b>ONE DIE</b><br>
+If Die 1 matches your number: <b>+20 points</b><br>
+Chance: 1/6 ≈ 16.7%
+</button>
+
+<button id="twoDiceBtn" class="riskBtn" onclick="selectBonusMode('two')">
+🎲🎲 <b>TWO DICE</b><br>
+If either die matches your number: <b>+10 points</b><br>
+Chance: 11/36 ≈ 30.6%
+</button>
+</div>
+
+<button class="bonusSubmit" onclick="submitBonusChoice()">LOCK MY BONUS CHOICE</button>
+<div id="bonusMessage" style="text-align:center;margin-top:10px;font-weight:800"></div>
+</div>
+
 <div class="score">Your score: <b id="score">0</b></div>
 </div>
 </div>
@@ -62,6 +90,8 @@ let room="";
 let pollTimer=null;
 let lastAnimatedRound=0;
 let animating=false;
+let bonusMode=null;
+let currentTarget=null;
 
 const dieFaces={1:"⚀",2:"⚁",3:"⚂",4:"⚃",5:"⚄",6:"⚅"};
 
@@ -119,8 +149,46 @@ async function joinGame(){
 }
 
 async function choose(n){
+ if(document.getElementById("bonusCard").classList.contains("hidden")){
+   try{
+     const d=await api("/api/predict",{room,player_id:playerId,choice:n});
+     render(d.state);
+   }catch(e){alert(e.message)}
+ }else{
+   currentTarget=n;
+   document.querySelectorAll(".num").forEach(btn=>{
+     btn.classList.toggle("selected",Number(btn.dataset.n)===n);
+   });
+ }
+}
+
+function selectBonusMode(mode){
+ bonusMode=mode;
+ document.getElementById("oneDieBtn").classList.toggle("selected",mode==="one");
+ document.getElementById("twoDiceBtn").classList.toggle("selected",mode==="two");
+}
+
+async function submitBonusChoice(){
+ if(!currentTarget){
+   alert("Choose your target number 1–6 first.");
+   return;
+ }
+ if(!bonusMode){
+   alert("Choose ONE DIE or TWO DICE.");
+   return;
+ }
+
  try{
-   const d=await api("/api/predict",{room,player_id:playerId,choice:n});
+   const d=await api("/api/bonus-choice",{
+     room,
+     player_id:playerId,
+     mode:bonusMode,
+     target:currentTarget
+   });
+   document.getElementById("bonusMessage").textContent=
+     bonusMode==="one"
+       ? `Locked: Number ${currentTarget}, ONE DIE, possible +20`
+       : `Locked: Number ${currentTarget}, TWO DICE, possible +10`;
    render(d.state);
  }catch(e){alert(e.message)}
 }
@@ -141,31 +209,39 @@ async function animateDie(result,roundNo){
 }
 
 function render(s){
- document.getElementById("round").textContent=`Round ${s.round} / ${s.total_rounds}`;
- document.getElementById("score").textContent=s.own?s.own.score:0;
+ document.getElementById("round").textContent=
+   s.status==="bonus_choice" ? "FINAL BONUS CHALLENGE" : `Round ${s.round} / ${s.total_rounds}`;
 
- document.querySelectorAll(".num").forEach(btn=>{
-   const n=Number(btn.dataset.n);
-   btn.disabled=s.status!=="accepting";
-   btn.classList.toggle("selected",Boolean(s.own&&s.own.prediction===n));
- });
+ document.getElementById("score").textContent=s.own?s.own.score:0;
 
  const st=document.getElementById("status");
  const nums=document.getElementById("numbers");
+ const bonusCard=document.getElementById("bonusCard");
+
+ bonusCard.classList.add("hidden");
 
  if(s.status==="accepting"){
    nums.classList.remove("hidden");
+   document.querySelectorAll(".num").forEach(btn=>{
+     const n=Number(btn.dataset.n);
+     btn.disabled=false;
+     btn.classList.toggle("selected",Boolean(s.own&&s.own.prediction===n));
+   });
+
    if(s.own&&s.own.prediction){
      st.innerHTML=`✓ Your choice: <b>${s.own.prediction}</b><br>Waiting for the teacher to lock and roll...`;
    }else{
      st.textContent="Choose one number";
    }
+
    if(!animating){
      document.getElementById("dieFace").textContent="🎲";
      document.getElementById("dieText").textContent="Waiting for the roll";
    }
 
  }else if(s.status==="result"){
+   document.querySelectorAll(".num").forEach(btn=>btn.disabled=true);
+
    const picked=s.own?s.own.prediction:null;
    const correct=picked===s.result;
 
@@ -178,9 +254,55 @@ function render(s){
      document.getElementById("dieText").textContent=`RESULT = ${s.result}`;
    }
 
+ }else if(s.status==="bonus_choice"){
+   bonusCard.classList.remove("hidden");
+   nums.classList.remove("hidden");
+   st.innerHTML="🎯 Choose your number and your final risk option.";
+
+   if(s.own_bonus){
+     currentTarget=s.own_bonus.target;
+     bonusMode=s.own_bonus.mode;
+     selectBonusMode(bonusMode);
+     document.getElementById("bonusMessage").textContent=
+       bonusMode==="one"
+         ? `Locked: Number ${currentTarget}, ONE DIE, possible +20`
+         : `Locked: Number ${currentTarget}, TWO DICE, possible +10`;
+   }
+
+   document.querySelectorAll(".num").forEach(btn=>{
+     btn.disabled=false;
+     btn.classList.toggle("selected",Number(btn.dataset.n)===currentTarget);
+   });
+
+   document.getElementById("dieFace").textContent="🎲🎲";
+   document.getElementById("dieText").textContent="Waiting for final bonus roll";
+
  }else if(s.status==="finished"){
    nums.classList.add("hidden");
-   st.innerHTML=`🏁 Game finished!<br>Your final score: <b>${s.own?s.own.score:0}</b>`;
+   bonusCard.classList.add("hidden");
+
+   if(s.bonus_result){
+     document.getElementById("dieFace").textContent=
+       `${dieFaces[s.bonus_result.die1]} ${dieFaces[s.bonus_result.die2]}`;
+     document.getElementById("dieText").textContent=
+       `Die 1 = ${s.bonus_result.die1}, Die 2 = ${s.bonus_result.die2}`;
+
+     if(s.own_bonus){
+       const label=s.own_bonus.mode==="one" ? "ONE DIE / +20" : "TWO DICE / +10";
+       st.innerHTML=
+         `🏁 Final bonus result<br>` +
+         `Your choice: ${label}, number ${s.own_bonus.target}<br>` +
+         (s.own_bonus.won
+           ? `🎉 YOU WON +${s.own_bonus.earned} POINTS!`
+           : `No bonus points this time.`) +
+         `<br><br>Your final score: <b>${s.own?s.own.score:0}</b>`;
+     }else{
+       st.innerHTML=`🏁 Game finished!<br>Your final score: <b>${s.own?s.own.score:0}</b>`;
+     }
+
+   }else{
+     st.innerHTML=`🏁 Game finished!<br>Your final score: <b>${s.own?s.own.score:0}</b>`;
+   }
  }
 }
 
