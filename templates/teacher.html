@@ -26,11 +26,14 @@ button{border:0;border-radius:12px;padding:14px 18px;font-size:18px;font-weight:
 .dieStage{text-align:center;padding:18px;margin-top:14px;background:#0b1220;border-radius:18px;border:1px solid #334155}
 .dieFace{font-size:110px;line-height:1.05;min-height:120px}
 .dieLabel{font-size:26px;font-weight:800;margin-top:8px}
+.bonusBox{background:#172554;padding:22px;border-radius:18px;margin-top:16px}
+.bonusChoices{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:16px 0}
+.bonusChoice{background:#0b1220;padding:18px;border-radius:14px;border:1px solid #475569}
 input{padding:12px;border-radius:10px;border:1px solid #475569;background:#0b1220;color:white;font-size:18px;width:120px}
 a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 .finalRank{display:grid;grid-template-columns:1fr auto;gap:8px;font-size:20px}
 .note{background:#172554;padding:14px;border-radius:12px;margin:14px 0;color:#dbeafe}
-@media(max-width:800px){.grid{grid-template-columns:1fr}h1{font-size:34px}.statrow{grid-template-columns:1fr}.qr{width:180px;height:180px}}
+@media(max-width:800px){.grid{grid-template-columns:1fr}h1{font-size:34px}.statrow,.bonusChoices{grid-template-columns:1fr}.qr{width:180px;height:180px}}
 </style>
 </head>
 <body>
@@ -41,11 +44,11 @@ a{color:#7dd3fc;word-break:break-all}.hidden{display:none!important}
 <div id="setup" class="card">
 <h2>Create a classroom game</h2>
 <div class="note">
-<b>Number of rounds</b> means how many times the class will play.
-The number of students is counted automatically when they join.
+<b>Number of rounds</b> is the number of regular prediction rounds.
+After the last round, students receive a separate final risk/reward challenge.
+Student count is automatic.
 </div>
-<label>
-Number of rounds:
+<label>Number of rounds:
 <input id="roundCount" type="number" min="2" max="100" value="20">
 </label>
 <button class="primary" onclick="createGame()">CREATE GAME</button>
@@ -67,7 +70,7 @@ Number of rounds:
 <div class="statrow">
 <div class="stat">ROUND<b id="round">1 / 20</b></div>
 <div class="stat">PLAYERS<b id="players">0</b></div>
-<div class="stat">PREDICTIONS<b id="predictions">0</b></div>
+<div class="stat" id="predictionStat">PREDICTIONS<b id="predictions">0</b></div>
 </div>
 
 <div id="statusText" class="resultBox">Predictions are OPEN</div>
@@ -75,6 +78,26 @@ Number of rounds:
 <div id="dieStage" class="dieStage">
 <div id="dieFace" class="dieFace">🎲</div>
 <div id="dieLabel" class="dieLabel">Waiting to roll</div>
+</div>
+
+<div id="bonusTeacher" class="bonusBox hidden">
+<h2>🎯 FINAL RISK / REWARD CHALLENGE</h2>
+<div class="bonusChoices">
+<div class="bonusChoice">
+<h3>🎲 ONE DIE</h3>
+<p>Student chooses one number.</p>
+<p><b>If Die 1 matches: +20 points</b></p>
+<p>Chance = 1/6 ≈ 16.7%</p>
+</div>
+<div class="bonusChoice">
+<h3>🎲🎲 TWO DICE</h3>
+<p>Student chooses one number.</p>
+<p><b>If either die matches: +10 points</b></p>
+<p>Chance = 11/36 ≈ 30.6%</p>
+</div>
+</div>
+<div id="bonusReady" style="font-size:22px;font-weight:800;text-align:center"></div>
+<button class="bigRoll" onclick="rollBonus()">🔒 LOCK BONUS CHOICES & ROLL TWO DICE</button>
 </div>
 
 <div style="margin-top:16px">
@@ -92,25 +115,31 @@ Number of rounds:
 </div>
 
 <div id="finalCard" class="card hidden" style="margin-top:20px">
-<h1>🏆 CAN WE BEAT RANDOMNESS?</h1>
+<h1>🏆 FINAL RESULTS</h1>
+
+<div id="bonusResultTeacher" class="bonusBox hidden" style="text-align:center">
+<h2>🎯 Bonus Dice</h2>
+<div id="bonusDiceDisplay" style="font-size:90px"></div>
+<div id="bonusDiceText" style="font-size:26px;font-weight:800"></div>
+</div>
 
 <div class="statrow">
-<div class="stat">Expected random score<b id="expected">0</b></div>
+<div class="stat">Expected regular score<b id="expected">0</b></div>
 <div class="stat">Class average<b id="average">0</b></div>
 <div class="stat">Highest score<b id="highest">0</b></div>
 </div>
 
 <div class="statrow">
 <div class="stat">Lowest score<b id="lowest">0</b></div>
-<div class="stat">Most popular number<b id="popular">-</b></div>
-<div class="stat">Rolled most often<b id="rolledMost">-</b></div>
+<div class="stat">Most popular regular number<b id="popular">-</b></div>
+<div class="stat">Regular die rolled most often<b id="rolledMost">-</b></div>
 </div>
 
 <h2>Final Ranking</h2>
 <div id="finalRanking" class="finalRank"></div>
 
 <h2 style="text-align:center;margin-top:28px">
-Did the winners have a better strategy, or were they lucky?
+Did the final risk choice change the winners?
 </h2>
 
 <div style="text-align:center;margin-top:22px">
@@ -126,7 +155,6 @@ let room=sessionStorage.getItem("sc_teacher_room")||"";
 let teacherToken=sessionStorage.getItem("sc_teacher_token")||"";
 let pollTimer=null;
 let rolling=false;
-
 const dieFaces={1:"⚀",2:"⚁",3:"⚂",4:"⚃",5:"⚄",6:"⚅"};
 
 async function api(path,body){
@@ -139,7 +167,6 @@ async function api(path,body){
  if(!r.ok||d.ok===false)throw new Error(d.error||"Request failed");
  return d;
 }
-
 function sleep(ms){return new Promise(resolve=>setTimeout(resolve,ms));}
 
 async function createGame(){
@@ -170,8 +197,6 @@ async function animateDie(finalResult){
  rolling=true;
  const face=document.getElementById("dieFace");
  const label=document.getElementById("dieLabel");
- const rollBtn=document.getElementById("rollBtn");
- rollBtn.disabled=true;
  label.textContent="Rolling...";
  for(let i=0;i<10;i++){
    face.textContent=dieFaces[1+Math.floor(Math.random()*6)];
@@ -185,7 +210,11 @@ async function animateDie(finalResult){
 function render(s){
  document.getElementById("round").textContent=`${s.round} / ${s.total_rounds}`;
  document.getElementById("players").textContent=s.student_count;
- document.getElementById("predictions").textContent=s.prediction_count;
+ document.getElementById("predictions").textContent=
+   s.status==="bonus_choice" ? s.bonus_choice_count : s.prediction_count;
+
+ const stat=document.getElementById("predictionStat");
+ stat.firstChild.textContent=s.status==="bonus_choice" ? "BONUS CHOICES" : "PREDICTIONS";
 
  const top=document.getElementById("top5");
  top.innerHTML="";
@@ -201,44 +230,68 @@ function render(s){
  const nextBtn=document.getElementById("nextBtn");
  const finishBtn=document.getElementById("finishBtn");
  const restartTopBtn=document.getElementById("restartTopBtn");
+ const bonusTeacher=document.getElementById("bonusTeacher");
 
  rollBtn.classList.add("hidden");
  nextBtn.classList.add("hidden");
  restartTopBtn.classList.add("hidden");
+ bonusTeacher.classList.add("hidden");
 
  if(s.status==="accepting"){
    st.innerHTML="🟢 Predictions are OPEN";
    rollBtn.classList.remove("hidden");
-   rollBtn.disabled=false;
    finishBtn.classList.remove("hidden");
    if(!rolling){
      document.getElementById("dieFace").textContent="🎲";
      document.getElementById("dieLabel").textContent="Waiting to roll";
    }
+
  }else if(s.status==="result"){
    st.innerHTML=`🎲 RESULT = <b>${s.result}</b><br><span style="font-size:20px">${s.winners_this_round} student(s) predicted correctly!</span>`;
    nextBtn.classList.remove("hidden");
+   nextBtn.textContent=s.round>=s.total_rounds ? "FINAL BONUS CHALLENGE ➜" : "NEXT ROUND ➜";
    finishBtn.classList.remove("hidden");
    if(!rolling){
      document.getElementById("dieFace").textContent=dieFaces[s.result]||"🎲";
      document.getElementById("dieLabel").textContent=`RESULT = ${s.result}`;
    }
+
+ }else if(s.status==="bonus_choice"){
+   st.innerHTML="🎯 FINAL BONUS CHOICES ARE OPEN";
+   bonusTeacher.classList.remove("hidden");
+   finishBtn.classList.remove("hidden");
+   document.getElementById("bonusReady").textContent=
+     `${s.bonus_choice_count} of ${s.student_count} students have chosen`;
+   document.getElementById("dieFace").textContent="🎲🎲";
+   document.getElementById("dieLabel").textContent="Waiting for final bonus roll";
+
  }else if(s.status==="finished"){
    st.innerHTML="🏁 GAME FINISHED";
    finishBtn.classList.add("hidden");
    restartTopBtn.classList.remove("hidden");
-   renderFinal(s.finished_stats);
+   renderFinal(s);
  }
 }
 
-function renderFinal(f){
+function renderFinal(s){
+ const f=s.finished_stats;
  document.getElementById("finalCard").classList.remove("hidden");
+
+ if(s.bonus_result){
+   document.getElementById("bonusResultTeacher").classList.remove("hidden");
+   document.getElementById("bonusDiceDisplay").textContent=
+     `${dieFaces[s.bonus_result.die1]} ${dieFaces[s.bonus_result.die2]}`;
+   document.getElementById("bonusDiceText").textContent=
+     `Die 1 = ${s.bonus_result.die1}   |   Die 2 = ${s.bonus_result.die2}`;
+ }
+
  document.getElementById("expected").textContent=f.expected_random_score;
  document.getElementById("average").textContent=f.class_average;
  document.getElementById("highest").textContent=f.highest_score;
  document.getElementById("lowest").textContent=f.lowest_score;
  document.getElementById("popular").textContent=f.most_popular_number?f.most_popular_number.join(", "):"—";
  document.getElementById("rolledMost").textContent=f.number_rolled_most_often?f.number_rolled_most_often.join(", "):"—";
+
  const rank=document.getElementById("finalRanking");
  rank.innerHTML="";
  f.ranking.slice(0,10).forEach((p,i)=>{
@@ -248,24 +301,30 @@ function renderFinal(f){
 
 async function lockAndRoll(){
  if(rolling)return;
- const count=Number(document.getElementById("predictions").textContent||0);
- if(count===0){
-   if(!confirm("No predictions have been submitted yet. Roll anyway?"))return;
- }
  try{
    const d=await api("/api/lock-roll",{room,teacher_token:teacherToken});
    await animateDie(d.result);
    render(d.state);
- }catch(e){
-   rolling=false;
-   document.getElementById("rollBtn").disabled=false;
-   alert(e.message);
- }
+ }catch(e){rolling=false;alert(e.message)}
 }
 
 async function nextRound(){
  try{
    const d=await api("/api/next",{room,teacher_token:teacherToken});
+   render(d.state);
+ }catch(e){alert(e.message)}
+}
+
+async function rollBonus(){
+ const choiceCount=Number(document.getElementById("predictions").textContent||0);
+ const playerCount=Number(document.getElementById("players").textContent||0);
+
+ if(choiceCount<playerCount){
+   if(!confirm(`${playerCount-choiceCount} student(s) have not made a bonus choice. Roll anyway?`))return;
+ }
+
+ try{
+   const d=await api("/api/bonus-roll",{room,teacher_token:teacherToken});
    render(d.state);
  }catch(e){alert(e.message)}
 }
