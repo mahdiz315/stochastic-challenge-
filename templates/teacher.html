@@ -85,14 +85,14 @@ Student count is automatic.
 <div class="bonusChoices">
 <div class="bonusChoice">
 <h3>🎲 ONE DIE</h3>
-<p>Student chooses one number.</p>
-<p><b>If Die 1 matches: +20 points</b></p>
+<p>Student predicts <b>Die 1</b>.</p>
+<p><b>If Die 1 prediction is correct: +20 points</b></p>
 <p>Chance = 1/6 ≈ 16.7%</p>
 </div>
 <div class="bonusChoice">
 <h3>🎲🎲 TWO DICE</h3>
-<p>Student chooses one number.</p>
-<p><b>If either die matches: +10 points</b></p>
+<p>Student predicts <b>Die 1 and Die 2 separately</b>.</p>
+<p><b>If either corresponding prediction is correct: +10 points</b></p>
 <p>Chance = 11/36 ≈ 30.6%</p>
 </div>
 </div>
@@ -269,6 +269,14 @@ function render(s){
    st.innerHTML="🏁 GAME FINISHED";
    finishBtn.classList.add("hidden");
    restartTopBtn.classList.remove("hidden");
+
+   if(s.bonus_result){
+     document.getElementById("dieFace").textContent=
+       `${dieFaces[s.bonus_result.die1]} ${dieFaces[s.bonus_result.die2]}`;
+     document.getElementById("dieLabel").textContent=
+       `FINAL: Die 1 = ${s.bonus_result.die1} | Die 2 = ${s.bonus_result.die2}`;
+   }
+
    renderFinal(s);
  }
 }
